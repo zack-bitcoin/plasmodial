@@ -29,10 +29,12 @@ easy:sync()
 #### Start mining
 To start mining with all CPU cores: 
 ```
-easy:mine().
+mine:start().
 ```
-
-To stop mining: ```CTRL+C``` (shuts down the node, TODO improve)
+To stop mining:
+```
+mine:stop().
+```
 
 #### Check your balance
 ```

@@ -83,10 +83,11 @@ account(ID) ->
 account() -> account(keys:id()).
 balance() -> account:balance(account()).
 
-mine() ->
-    mine(10000000000).
-mine(N) -> 
-    sync(),
-    block:mine_blocks(N, 200000). 
+%mine() ->
+%    mine:start().
+    %mine(10000000000).
+%mine(N) -> 
+    %sync(),
+    %block:mine_blocks(N, 100000, 30). 
 %second number is how many nonces we try per round.
 %first number is how many rounds we do.
