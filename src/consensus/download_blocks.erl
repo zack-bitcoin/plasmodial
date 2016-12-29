@@ -100,10 +100,13 @@ absorb_txs([H|T]) ->
     tx_pool_feeder:absorb(H),
     absorb_txs(T).
 get_txs(IP, Port) ->
-    {ok, Them} = talker:talk({txs}, IP, Port),
-    absorb_txs(Them),
-    {_,_,_,Mine} = tx_pool:data(),
-    talker:talk({txs, Mine}, IP, Port).
+    case talker:talk({txs}, IP, Port) of
+	{error, failed_connect} -> ok;
+	{ok, Them} ->
+	    absorb_txs(Them),
+	    {_,_,_,Mine} = tx_pool:data(),
+	    talker:talk({txs, Mine}, IP, Port)
+    end.
 trade_peers(IP, Port) ->
     {ok, Peers} = talker:talk({peers}, IP, Port),
     MyPeers = tuples2lists(peers:all()),

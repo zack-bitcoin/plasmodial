@@ -44,7 +44,7 @@ easy:balance().
 #### Stop a node
 To stop a node run:
 ```
-testnet_sup:stop()
+easy:off().
 ```
 
 

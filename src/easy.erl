@@ -82,6 +82,7 @@ account(ID) ->
 
 account() -> account(keys:id()).
 balance() -> account:balance(account()).
+off() -> testnet_sup:stop().
 
 %mine() ->
 %    mine:start().
