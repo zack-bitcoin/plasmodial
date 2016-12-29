@@ -20,7 +20,7 @@ sync_all([], _) -> success;
 sync_all([{IP, Port}|T], Height) ->
     sync(IP, Port, Height),
     %spawn(download_blocks, sync, [IP, Port, Height]),
-    timer:sleep(500),
+    %timer:sleep(1000),
     sync_all(T, Height).
 sync(IP, Port, MyHeight) ->
     %lower their ranking

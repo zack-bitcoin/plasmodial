@@ -10,7 +10,7 @@ terminate(_, _) -> io:format("died!"), ok.
 handle_info(_, X) -> {noreply, X}.
 handle_cast(mine, go) -> 
     io:fwrite("mine mine mine\n"),
-    block:mine_blocks(1, 1000000, 1),
+    block:mine_blocks(10, 100000, 9),
     spawn(fun() -> mine() end),
     {noreply, go};
 handle_cast(start, _) -> 
