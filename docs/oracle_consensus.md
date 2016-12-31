@@ -1,6 +1,5 @@
-abstract:
 
-Existing oracle mechanisms are built on top of voting. It is shown that voting can not adequately solve the oracle problem in a useful way. It is shown that betting mechanisms do not suffer the same limitations. 
+Existing oracle mechanisms are built on top of voting. Voting can not adequately solve the oracle problem in a useful way. Betting mechanisms do not suffer this same limitations. 
 
 
 
