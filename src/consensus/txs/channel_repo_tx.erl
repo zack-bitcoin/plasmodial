@@ -1,7 +1,7 @@
 %If a channel has less than 0 money, then anyone can delete it for a small reward.
 
 -module(channel_repo_tx).
--export([make/5,doit/4]).
+-export([make/5,doit/3]).
 -record(cr, {from = 0, nonce = 0, fee = 0, id = 0}).
 
 make(From, ID, Fee, Accounts, Channels) ->
@@ -11,7 +11,9 @@ make(From, ID, Fee, Accounts, Channels) ->
     Tx = #cr{from = From, nonce = N, fee = Fee, id = ID},
     {Tx, [Proof, CProof]}.
 
-doit(Tx, Channels, Accounts, NewHeight) ->
+doit(Tx, Trees, NewHeight) ->
+    Channels = trees:channels(Trees),
+    Accounts = trees:accounts(Trees),
     From = Tx#cr.from,
     CID = Tx#cr.id,
     A = constants:delete_channel_reward(),
@@ -23,5 +25,6 @@ doit(Tx, Channels, Accounts, NewHeight) ->
     true = B =< Rent,
     NewAccounts = account:write(Accounts, Facc),
     NewChannels = channel:delete(CID, Channels),
-    {NewChannels, NewAccounts}.
+    Trees2 = trees:update_channels(Trees, NewChannels),
+    trees:update_accounts(Trees2, NewAccounts).
 

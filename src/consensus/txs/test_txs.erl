@@ -24,24 +24,26 @@ test(1) ->
     BP = block:genesis(),
     PH = block:hash(BP),
     tx_pool:dump(),
-    Accounts = block:accounts(BP),
+    Trees = block:trees(BP),
+    Accounts = trees:accounts(Trees),
     {NewAddr,NewPub,NewPriv} = testnet_sign:hard_new_key(),
 
     Fee = 10,
     {Ctx, _Proof} = create_account_tx:make(NewAddr, 100000000, Fee, 1, 2, Accounts),
     Stx = keys:sign(Ctx, Accounts),
     absorb(Stx),
-    {Accounts2, _, _, _} = tx_pool:data(),
+    {Trees2,  _, _} = tx_pool:data(),
+    Accounts2 = trees:accounts(Trees2),
     timer:sleep(200),
     {Ctx2, _} = spend_tx:make(2, 10, Fee, 1, Accounts2),
     Stx2 = keys:sign(Ctx2, Accounts2),
     absorb(Stx2),
-    {Accounts3, _, _, _} = tx_pool:data(),
-
+    {Trees3, _, _} = tx_pool:data(),
+    Accounts3 = trees:accounts(Trees3),
     {Ctx3, _} = delete_account_tx:make(1, 2, Fee, Accounts3),
     Stx3 = testnet_sign:sign_tx(Ctx3, NewPub, NewPriv, 2, Accounts3),
     absorb(Stx3),
-    {_Accounts4, _, _, Txs} = tx_pool:data(),
+    {_, _, Txs} = tx_pool:data(),
 
     Block = block:make(PH, Txs, 1),%1 is the master pub
     MBlock = block:mine(Block, 1000000000),
@@ -54,19 +56,21 @@ test(2) ->
     BP = block:genesis(),
     PH = block:hash(BP),
     tx_pool:dump(),
-    Accounts = block:accounts(BP),
+    Trees = block:trees(BP),
+    Accounts = trees:accounts(Trees),
     {NewAddr,_NewPub,_NewPriv} = testnet_sign:hard_new_key(),
 
     Fee = 10,
     {Ctx, _Proof} = create_account_tx:make(NewAddr, 0, Fee, 1, 2, Accounts),
     Stx = keys:sign(Ctx, Accounts),
     absorb(Stx),
-    {Accounts2, _, _, _} = tx_pool:data(),
+    {Trees2, _, _} = tx_pool:data(),
+    Accounts2 = trees:accounts(Trees2),
 
     {Ctx2, _} = repo_tx:make(2, Fee, 1, Accounts2),
     Stx2 = keys:sign(Ctx2, Accounts2),
     absorb(Stx2),
-    {_Accounts3, _, _, Txs} = tx_pool:data(),
+    {_, _, Txs} = tx_pool:data(),
 
     Block = block:mine(block:make(PH, Txs, 1), 100000000),%1 is the master pub
     block:check2(Block),
@@ -77,7 +81,8 @@ test(3) ->
     BP = block:genesis(),
     PH = block:hash(BP),
     tx_pool:dump(),
-    Accounts = block:accounts(BP),
+    Trees = block:trees(BP),
+    Accounts = trees:accounts(Trees),
     {NewAddr,NewPub,NewPriv} = testnet_sign:hard_new_key(),
 
     Fee = 10,
@@ -86,7 +91,8 @@ test(3) ->
     {Ctx, _Proof} = create_account_tx:make(NewAddr, Amount, Fee, 1, ID2, Accounts),
     Stx = keys:sign(Ctx, Accounts),
     absorb(Stx),
-    {Accounts2, _Channels, _, _} = tx_pool:data(),
+    {Trees2, _, _} = tx_pool:data(),
+    Accounts2 = trees:accounts(Trees2),
 
     io:fwrite("account2 is "),
     io:fwrite(integer_to_list(Accounts2)),
@@ -99,19 +105,23 @@ test(3) ->
     Stx2 = keys:sign(Ctx2, Accounts2),
     SStx2 = testnet_sign:sign_tx(Stx2, NewPub, NewPriv, ID2, Accounts2), 
     absorb(SStx2),
-    {Accounts3, Channels, _, _} = tx_pool:data(),
+    {Trees3, _, _} = tx_pool:data(),
+    Accounts3 = trees:accounts(Trees3),
+    Channels = trees:channels(Trees3),
 
     {Ctx3, _} = grow_channel_tx:make(CID, Accounts3, Channels, 22, 33, 0, Fee),
     Stx3 = keys:sign(Ctx3, Accounts3),
     SStx3 = testnet_sign:sign_tx(Stx3, NewPub, NewPriv, ID2, Accounts3),
     absorb(SStx3),
-    {Accounts4,Channels2,_,_} = tx_pool:data(),
+    {Trees4, _, _} = tx_pool:data(),
+    Accounts4 = trees:accounts(Trees4),
+    Channels2 = trees:channels(Trees4),
 
     {Ctx4, _} = channel_team_close_tx:make(CID, Accounts4, Channels2, 0, Fee),
     Stx4 = keys:sign(Ctx4, Accounts4),
     SStx4 = testnet_sign:sign_tx(Stx4, NewPub, NewPriv, ID2, Accounts4),
     absorb(SStx4),
-    {_,_,_,Txs} = tx_pool:data(),
+    {_,_,Txs} = tx_pool:data(),
 
     Block = block:mine(block:make(PH, Txs, 1), 1000000000),%1 is the master pub
 	   block:check2(Block),
@@ -123,7 +133,8 @@ test(4) ->
     BP = block:genesis(),
     PH = block:hash(BP),
     tx_pool:dump(),
-    Accounts = block:accounts(BP),
+    Trees = block:trees(BP),
+    Accounts = trees:accounts(Trees),
     {NewAddr,NewPub,NewPriv} = testnet_sign:hard_new_key(),
 
     Fee = 10,
@@ -132,7 +143,8 @@ test(4) ->
     {Ctx, _Proof} = create_account_tx:make(NewAddr, Amount, Fee, 1, ID2, Accounts),
     Stx = keys:sign(Ctx, Accounts),
     absorb(Stx),
-    {Accounts2, _Channels, _, _} = tx_pool:data(),
+    {Trees2, _, _} = tx_pool:data(),
+    Accounts2 = trees:accounts(Trees2),
 
     CID = 5,
     Entropy = 432, 
@@ -142,12 +154,14 @@ test(4) ->
     Stx2 = keys:sign(Ctx2, Accounts2),
     SStx2 = testnet_sign:sign_tx(Stx2, NewPub, NewPriv, ID2, Accounts2), 
     absorb(SStx2),
-    {Accounts3, Channels, _, _} = tx_pool:data(),
+    {Trees3, _, _} = tx_pool:data(),
+    Accounts3 = trees:accounts(Trees3),
+    Channels = trees:channels(Trees3),
 
     {Ctx4, _} = channel_repo_tx:make(1, CID, Fee, Accounts3,Channels),
     Stx4 = keys:sign(Ctx4, Accounts3),
     absorb(Stx4),
-    {_,_,_,Txs} = tx_pool:data(),
+    {_,_,Txs} = tx_pool:data(),
 
     Block = block:mine(block:make(PH, Txs, 1), 10000000000),%1 is the master pub
     block:check2(Block),
@@ -159,7 +173,8 @@ test(5) ->
     BP = block:genesis(),
     PH = block:hash(BP),
     tx_pool:dump(),
-    Accounts = block:accounts(BP),
+    Trees = block:trees(BP),
+    Accounts = trees:accounts(Trees),
     {NewAddr,NewPub,NewPriv} = testnet_sign:hard_new_key(),
 
     Fee = 10,
@@ -168,7 +183,8 @@ test(5) ->
     {Ctx, _Proof} = create_account_tx:make(NewAddr, Amount, Fee, 1, ID2, Accounts),
     Stx = keys:sign(Ctx, Accounts),
     absorb(Stx),
-    {Accounts2, _Channels, _, _} = tx_pool:data(),
+    {Trees2, _, _} = tx_pool:data(),
+    Accounts2 = trees:accounts(Trees2),
 
     CID = 5,
     Entropy = 432,
@@ -178,7 +194,9 @@ test(5) ->
     Stx2 = keys:sign(Ctx2, Accounts2),
     SStx2 = testnet_sign:sign_tx(Stx2, NewPub, NewPriv, ID2, Accounts2), 
     absorb(SStx2),
-    {Accounts3, Channels, _, _} = tx_pool:data(),
+    {Trees3, _, _} = tx_pool:data(),
+    Accounts3 = trees:accounts(Trees3),
+    Channels = trees:channels(Trees3),
     
     Code = compiler_chalang:doit(<<"int 1 int 50">>),%channel nonce is 1, sends 50.
     Delay = 0,
@@ -190,14 +208,16 @@ test(5) ->
     Stx3 = keys:sign(Ctx3, Accounts3),
     absorb(Stx3),
     timer:sleep(200),
-    {Accounts4, Channels2, _, _Txs} = tx_pool:data(),
+    {Trees4, _, _Txs} = tx_pool:data(),
+    Accounts4 = trees:accounts(Trees4),
+    Channels2 = trees:channels(Trees4),
     io:fwrite("test_txs CID is "),
     io:fwrite(integer_to_list(CID)),
     io:fwrite("\n"),
     {Ctx4, _} = channel_timeout_tx:make(1,Accounts4,Channels2,CID,Fee),
     Stx4 = keys:sign(Ctx4, Accounts4),
     absorb(Stx4),
-    {_, _, _, Txs} = tx_pool:data(),
+    {_, _, Txs} = tx_pool:data(),
 
     Block = block:mine(block:make(PH, Txs, 1), 100000000),%1 is the master pub
     block:check2(Block),
@@ -208,7 +228,8 @@ test(6) ->
     BP = block:genesis(),
     PH = block:hash(BP),
     tx_pool:dump(),
-    Accounts = block:accounts(BP),
+    Trees = block:trees(BP),
+    Accounts = trees:accounts(Trees),
     {NewAddr,NewPub,NewPriv} = testnet_sign:hard_new_key(),
 
     Fee = 10,
@@ -217,7 +238,8 @@ test(6) ->
     {Ctx, _Proof} = create_account_tx:make(NewAddr, Amount, Fee, 1, ID2, Accounts),
     Stx = keys:sign(Ctx, Accounts),
     absorb(Stx),
-    {Accounts2, _Channels, _, _} = tx_pool:data(),
+    {Trees2, _, _} = tx_pool:data(),
+    Accounts2 = trees:accounts(Trees2),
 
     CID = 5,
     Entropy = 432,
@@ -226,7 +248,9 @@ test(6) ->
     Stx2 = keys:sign(Ctx2, Accounts2),
     SStx2 = testnet_sign:sign_tx(Stx2, NewPub, NewPriv, ID2, Accounts2), 
     absorb(SStx2),
-    {Accounts3, Channels, _, _} = tx_pool:data(),
+    {Trees3, _, _} = tx_pool:data(),
+    Accounts3 = trees:accounts(Trees3),
+    Channels = trees:channels(Trees3),
     
     Code = compiler_chalang:doit(<<"int 1 int 50">>),%channel nonce is 1, sends 50.
     Delay = 0,
@@ -237,7 +261,9 @@ test(6) ->
     {Ctx3, _} = channel_solo_close:make(1, Fee, SignedScriptPubKey, [ScriptSig], Accounts3, Channels), 
     Stx3 = keys:sign(Ctx3, Accounts3),
     absorb(Stx3),
-    {Accounts4, Channels2, _, _} = tx_pool:data(),
+    {Trees4, _, _} = tx_pool:data(),
+    Accounts4 = trees:accounts(Trees4),
+    Channels2 = trees:channels(Trees4),
 
     ScriptSig2 = compiler_chalang:doit(<<" int 2 ">>),
     {Ctx4, _} = channel_slash_tx:make(2,Fee,SignedScriptPubKey,[ScriptSig2],Accounts4,Channels2),
@@ -246,7 +272,9 @@ test(6) ->
     io:fwrite("before absorb \n"),
     absorb(Stx4),
     io:fwrite("after absorb \n"),
-    {Accounts5, Channels3, _, _} = tx_pool:data(),
+    {Trees5, _, _} = tx_pool:data(),
+    Accounts5 = trees:accounts(Trees5),
+    Channels3 = trees:channels(Trees5),
 
     ScriptSig3 = compiler_chalang:doit(<<" int 3 ">>),
     {Ctx5, _} = channel_slash_tx:make(1,Fee,SignedScriptPubKey,[ScriptSig3],Accounts5,Channels3),
@@ -255,12 +283,14 @@ test(6) ->
     io:fwrite("before absorb \n"),
     absorb(Stx5),
     io:fwrite("after absorb \n"),
-    {Accounts6, Channels4, _, _Txs2} = tx_pool:data(),
+    {Trees6, _, _Txs2} = tx_pool:data(),
+    Accounts6 = trees:accounts(Trees6),
+    Channels4 = trees:channels(Trees6),
 
     {Ctx6, _} = channel_timeout_tx:make(1,Accounts6,Channels4,CID,Fee),
     Stx6 = keys:sign(Ctx6, Accounts6),
     absorb(Stx6),
-    {_, _, _, Txs} = tx_pool:data(),
+    {_, _, Txs} = tx_pool:data(),
 
     Block = block:mine(block:make(PH, Txs, 1), 10000000000),%1 is the master pub
     block:check2(Block),
@@ -270,5 +300,9 @@ test(7) ->
     %existence tx
     S = <<"test data">>,
     ID = keys:id(),
-    existence_tx:make(ID, 0, S),
+    {Trees,_,_} = tx_pool:data(),
+    Accounts = trees:accounts(Trees),
+    {Tx, _} = existence_tx:make(ID, 1000, S, Accounts),
+    Stx = keys:sign(Tx, Accounts),
+    absorb(Stx),
     success.

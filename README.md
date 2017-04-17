@@ -86,4 +86,4 @@ easy:off().
 
 
 ### Else
-If you want to know more, get in touch with us via [Gitter Chat](https://gitter.im/aeternity?Lobby)
+If you want to know more, get in touch with us via [Gitter Chat](https://gitter.im/BumblebeeBat/plasmodial)

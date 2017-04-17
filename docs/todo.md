@@ -1,3 +1,6 @@
+channel shouldn't have rent, that can be programmed in.
+
+
 active_oracles needs it's order book.
 maybe active_oracles and oracle_results should be the same tree.
 Then the same order book could be kept around for people to withdraw their money.

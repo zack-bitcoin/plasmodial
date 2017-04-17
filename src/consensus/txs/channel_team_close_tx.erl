@@ -1,7 +1,7 @@
 %If you did not get slashed, and you waited delay since channel_timeout, then this is how you close the channel and get the money out.
 
 -module(channel_team_close_tx).
--export([doit/4, make/5, acc1/1, acc2/1, fee/1, amount/1]).
+-export([doit/3, make/5, acc1/1, acc2/1, fee/1, amount/1]).
 -record(ctc, {aid1 = 0, aid2 = 0, fee = 0,
 	      nonce = 0, id = 0, amount = 0}).
 amount(Tx) -> Tx#ctc.amount.
@@ -20,7 +20,9 @@ make(ID,Accounts,Channels,Amount,Fee) ->
 	     amount = Amount},
     {Tx, [CProof, Proof1, Proof2]}.
     
-doit(Tx, Channels,Accounts,NewHeight) ->
+doit(Tx,Trees,NewHeight) ->
+    Channels = trees:channels(Trees),
+    Accounts = trees:accounts(Trees),
     ID = Tx#ctc.id,
     {_, OldChannel, _} = channel:get(ID, Channels),
     Aid1 = channel:acc1(OldChannel),
@@ -37,6 +39,7 @@ doit(Tx, Channels,Accounts,NewHeight) ->
     Acc2 = account:update(Aid2, Accounts, Bal2 - Amount, none, NewHeight),
     Accounts2 = account:write(Accounts, Acc1),
     NewAccounts = account:write(Accounts2, Acc2),
-    {NewChannels, NewAccounts}.
+    Trees2 = trees:update_channels(Trees, NewChannels),
+    trees:update_accounts(Trees2, NewAccounts).
     
     

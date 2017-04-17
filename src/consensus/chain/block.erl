@@ -1,42 +1,37 @@
 -module(block).
 -export([hash/1,check2/1,test/0,mine_test/0,genesis/0,
-	 make/3,mine/2,height/1,accounts/1,channels/1,
-	 accounts_hash/1,channels_hash/1,
+	 make/3,mine/2,height/1,
 	 read/1,binary_to_file/1,block/1,prev_hash/2,
 	 prev_hash/1,read_int/1,check1/1,pow_block/1,
 	 mine_blocks/2, hashes/1, block_to_header/1,
-	 median_last/2,
+	 median_last/2, trees/1, trees_hash/1,
 	 guess_number_of_cpu_cores/0
 	]).
 
--record(block, {height, prev_hash, txs, channels, 
-		accounts, mines_block, time, 
+-record(block, {height, prev_hash, txs, trees, 
+		mines_block, time, 
 		difficulty,
 		magic = constants:magic()}).%tries: txs, channels, census, 
--record(block_plus, {block, pow, accounts, channels, accumulative_difficulty = 0, prev_hashes = {}}).%The accounts and channels in this structure only matter for the local node. they are pointers to the locations in memory that are the root locations of the account and channel tries on this node.
+-record(block_plus, {block, pow, trees, accumulative_difficulty = 0, prev_hashes = {}}).%The accounts and channels in this structure only matter for the local node. they are pointers to the locations in memory that are the root locations of the account and channel tries on this node.
 %prev_hash is the hash of the previous block.
 %this gets wrapped in a signature and then wrapped in a pow.
+trees_hash(X) ->
+    X#block.trees.
 block_to_header(Block) ->
     Height = Block#block.height,
     PH = Block#block.prev_hash,
-    Channels = Block#block.channels,
-    Accounts = Block#block.accounts,
+    Trees = Block#block.trees,
     Miner = Block#block.mines_block,
     Time = Block#block.time,
     Diff = Block#block.difficulty,
     Magic = Block#block.magic,
-    %channels, accounts, miner, height, can be made into one merkle trie, which reduces the size of the header by more than half.
-    Mid = <<Height:(constants:height_bits()),
-	    Channels/binary,
-	    Accounts/binary,
-	    Miner:(constants:acc_bits())>>,
-    HM = testnet_hasher:doit(Mid),
-    true = size(PH) == 12,
     <<PH/binary,
-      HM/binary,
+      Height:(constants:height_bits()),
+      Miner:(constants:acc_bits()),
       Time:(constants:time_bits()),
       Diff:(constants:difficulty_bits()),
-      Magic:(constants:magic_bits())>>.
+      Magic:(constants:magic_bits()),
+      Trees/binary>>.
       
 hashes(BP) ->
     BP#block_plus.prev_hashes.
@@ -51,18 +46,8 @@ block(B) when is_record(B, block) -> B.
 pow_block(B) when element(1, B) == pow -> B;
 pow_block(BP) when is_record(BP, block_plus) ->
     pow_block(BP#block_plus.block).
-
-channels(Block) ->
-    Block#block_plus.channels.
-channels_hash(BP) when is_record(BP, block_plus) ->
-    channels_hash(pow:data(BP#block_plus.block));
-channels_hash(Block) -> Block#block.channels.
-accounts(BP) ->
-    BP#block_plus.accounts.
-accounts_hash(BP) when is_record(BP, block_plus) ->
-    accounts_hash(pow:data(BP#block_plus.block));
-accounts_hash(Block) ->
-    Block#block.accounts.
+trees(Block) ->
+    Block#block_plus.trees.
 height(X) ->
     B = block(X),
     B#block.height.
@@ -96,27 +81,17 @@ genesis() ->
     ID = 1,
     First = account:new(ID, Address, constants:initial_coins(), 0),
     Accounts = account:write(0, First),
-    AccRoot = account:root_hash(Accounts),
-    ChaRoot = channel:root_hash(0),
-
-    %Block = 
-    %#block{height = 0,
-	       %txs = [],
-	       %channels = ChaRoot,
-	       %accounts = AccRoot,
-	       %mines_block = ID,
-	       %time = 0,
-	       %difficulty = constants:initial_difficulty()},
-    %Block = {pow,{block,0,<<0:(8*hash:hash_depth())>>,[], ChaRoot, AccRoot,
-    Block = {pow,{block,0,<<0:(8*constants:hash_size())>>,[], ChaRoot, AccRoot,
-		  %<<1,223,2,81,223,207,12,158,239,5,219,253>>,
-		  %<<108,171,180,35,202,56,178,151,11,85,188,193>>,
+    Trees = trees:new(Accounts, 0, 0, 0, 0),
+    TreeRoot = trees:root_hash(Trees),
+    Block = {pow,{block,0,<<0:(8*constants:hash_size())>>,[], TreeRoot,
 		  1,0,4080, constants:magic()},
 	     4080,44358461744572027408730},
-    #block_plus{block = Block, channels = 0, accounts = Accounts}.
+    Trees = trees:new(Accounts, 0, 0, 0, 0),
+    #block_plus{block = Block, trees = Trees}.
     
 absorb_txs(PrevPlus, MinesBlock, Height, Txs) ->
-    OldAccounts = PrevPlus#block_plus.accounts,
+    Trees = PrevPlus#block_plus.trees,
+    OldAccounts = trees:accounts(Trees),
     NewAccounts = 
 	case MinesBlock of
 	    -1 ->
@@ -130,9 +105,9 @@ absorb_txs(PrevPlus, MinesBlock, Height, Txs) ->
 		NM = account:update(MB, OldAccounts, constants:block_reward(), none, Height),
 		account:write(OldAccounts, NM)
 	end,
+    NewTrees = trees:update_accounts(Trees, NewAccounts),
     txs:digest(Txs, 
-	       PrevPlus#block_plus.channels,
-	       NewAccounts,
+	       NewTrees,
 	       Height).
     
 make(PrevHash, Txs, ID) ->%ID is the user who gets rewarded for mining this block.
@@ -141,23 +116,19 @@ make(PrevHash, Txs, ID) ->%ID is the user who gets rewarded for mining this bloc
     %Parent = pow:data(ParentPlus#block_plus.block),
     Height = Parent#block.height + 1,
     MB = mine_block_ago(Height - constants:block_creation_maturity()),
-    {NewChannels, NewAccounts} = absorb_txs(ParentPlus, MB, Height, Txs),
-    CHash = channel:root_hash(NewChannels),
-    AHash = account:root_hash(NewAccounts),
+    NewTrees = absorb_txs(ParentPlus, MB, Height, Txs),
     NextDifficulty = next_difficulty(ParentPlus),
     #block_plus{
        block = 
 	   #block{height = Height,
 		  prev_hash = PrevHash,
 		  txs = Txs,
-		  channels = CHash,
-		  accounts = AHash,
+		  trees = trees:root_hash(NewTrees),
 		  mines_block = ID,
 		  time = time_now()-5,
 		  difficulty = NextDifficulty},
        accumulative_difficulty = next_acc(ParentPlus, NextDifficulty),
-       channels = NewChannels, 
-       accounts = NewAccounts,
+       trees = NewTrees,
        prev_hashes = prev_hashes(PrevHash)
       }.
 next_acc(Parent, ND) ->
@@ -265,10 +236,9 @@ check2(BP) ->
     Height = Block#block.height,
     MB = mine_block_ago(Height - constants:block_creation_maturity()),
     true = (Height-1) == Prev#block.height,
-    {CH, AH} = {Block#block.channels, Block#block.accounts},
-    {CR, AR} = absorb_txs(ParentPlus, MB, Height, Block#block.txs),
-    CH = channel:root_hash(CR),
-    AH = account:root_hash(AR),
+    TreeHash = Block#block.trees,
+    Trees = absorb_txs(ParentPlus, MB, Height, Block#block.txs),
+    TreeHash = trees:root_hash(Trees),
     MyAddress = keys:address(),
     case MB of
 	{ID, MyAddress} ->
@@ -276,7 +246,7 @@ check2(BP) ->
 	    %because of hash_check, this function is only run once per block. 
 	_ -> ok
     end,
-    BP#block_plus{block = Block, channels = CR, accounts = AR, accumulative_difficulty = next_acc(ParentPlus, Block#block.difficulty), prev_hashes = prev_hashes(hash(Prev))}.
+    BP#block_plus{block = Block, trees = Trees, accumulative_difficulty = next_acc(ParentPlus, Block#block.difficulty), prev_hashes = prev_hashes(hash(Prev))}.
 
 mine_block_ago(Height) when Height < 1 ->
     -1;
@@ -344,7 +314,8 @@ test() ->
     block:read(top:doit()),
     PH = top:doit(),
     BP = read(PH),
-    Accounts = accounts(BP),
+    Trees = trees(BP),
+    Accounts = trees:accounts(Trees),
     %Accounts = BP#block_plus.accounts,
     _ = account:get(1, Accounts),
     %{block_plus, Block, _, _, _} = make(PH, [], 1),

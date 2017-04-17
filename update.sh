@@ -1,4 +1,4 @@
-git pull origin experimental
+git pull origin master
 if [ `uname -s`==Linux ]
 then
 ./rebar get-deps

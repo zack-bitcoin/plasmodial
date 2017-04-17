@@ -1,5 +1,5 @@
 -module(channel_timeout_tx).
--export([doit/4, make/5]).
+-export([doit/3, make/5]).
 -record(timeout, {aid = 0, nonce = 0, fee = 0, cid = 0}).
 %If your partner is not helping you, this is how you start the process of closing the channel. 
 %You should only use the final channel-state, or else your partner can punish you for cheating.
@@ -18,7 +18,9 @@ make(ID,Accounts,Channels,CID,Fee) ->
 		  fee = Fee, cid = CID},
     {Tx, [Proof, Proof2, Proofc]}.
 
-doit(Tx, Channels, Accounts, NewHeight) ->
+doit(Tx, Trees, NewHeight) ->
+    Accounts = trees:accounts(Trees),
+    Channels = trees:channels(Trees),
     From = Tx#timeout.aid,
     CID = Tx#timeout.cid,
     {_, Channel, _} = channel:get(CID, Channels),
@@ -48,5 +50,6 @@ doit(Tx, Channels, Accounts, NewHeight) ->
     Acc4 = account:update(From, Accounts4, -Fee, none, NewHeight),
     NewAccounts = account:write(Accounts4, Acc4),
     NewChannels = channel:delete(CID, Channels),
-    {NewChannels, NewAccounts}.
+    Trees2 = trees:update_channels(Trees, NewChannels),
+    trees:update_accounts(Trees2, NewAccounts).
 

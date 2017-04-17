@@ -1,8 +1,10 @@
 -module(existence).
--export([get/2,write/2,new/1,hash2int/1, test/0]).
+-export([get/2,write/2,new/1,hash2int/1,root_hash/1,hash/1, test/0]).
 %for accessing the proof of existence tree
 -record(exist, {hash}).
-
+-define(name, existence).
+hash(X) ->
+    X#exist.hash.
 new(Hash) ->
     #exist{hash = Hash}.
 serialize(E) ->
@@ -18,7 +20,7 @@ deserialize(B) ->
 get(Hash, Tree) ->
     true = is_binary(Hash),
     Key = hash2int(Hash),
-    {X, Leaf, Proof} = trie:get(Key, Tree, existence),
+    {X, Leaf, Proof} = trie:get(Key, Tree, ?name),
     V = case Leaf of
 	    empty -> empty;
 	    L -> 
@@ -30,7 +32,7 @@ write(E, Tree) ->
     Hash = E#exist.hash,
     Key = hash2int(Hash),
     X = serialize(E),
-    trie:put(Key, X, 0, Tree, existence).
+    trie:put(Key, X, 0, Tree, ?name).
 	     
 hash2int(X) -> 
     S = size(X),
@@ -40,6 +42,8 @@ hash2int(<<>>, N) -> N;
 hash2int(<<X, Y/binary>>, N) ->
     M = (N*256) + X,
     hash2int(Y, M).
+root_hash(Root) ->
+    trie:root_hash(?name, Root).
 
 
 test() ->

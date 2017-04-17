@@ -1,5 +1,5 @@
 -module(channel_slash_tx).
--export([doit/4, make/6]).
+-export([doit/3, make/6]).
 -record(cs, {from, nonce, fee = 0, 
 	     scriptpubkey, scriptsig}).
 make(From, Fee, ScriptPubkey, ScriptSig, Accounts,Channels) ->
@@ -20,7 +20,9 @@ make(From, Fee, ScriptPubkey, ScriptSig, Accounts,Channels) ->
 	      scriptsig = ScriptSig},
     {Tx, [Proof1, Proof2, Proofc]}.
 
-doit(Tx, Channels, Accounts, NewHeight) ->
+doit(Tx, Trees, NewHeight) ->
+    Channels = trees:channels(Trees),
+    Accounts = trees:accounts(Trees),
     From = Tx#cs.from,
     %CID = Tx#cs.cid,
     SignedSPK = Tx#cs.scriptpubkey,
@@ -37,7 +39,6 @@ doit(Tx, Channels, Accounts, NewHeight) ->
     Acc2 = spk:acc2(SPK),
     true = channel:entropy(OldChannel) == spk:entropy(SPK),
     %Mode = channel:mode(OldChannel),
-    SR = spk:slash_reward(SPK),
     Fee = Tx#cs.fee,
     Nonce = Tx#cs.nonce,
     {Amount, NewCNonce} = spk:run(fast, Tx#cs.scriptsig, SPK, NewHeight, 1, Accounts, Channels),
@@ -45,17 +46,13 @@ doit(Tx, Channels, Accounts, NewHeight) ->
     true = NewCNonce > channel:nonce(OldChannel),
     %delete the channel. empty the channel into the accounts.
     %NewChannels = channel:delete(CID, Channels),
-    true = (-1 < (channel:bal1(OldChannel)-SR-Amount)),%channels can only delete money that was inside the channel.
-    true = (-1 < (channel:bal2(OldChannel)-SR+Amount)),
+    true = (-1 < (channel:bal1(OldChannel)-Amount)),%channels can only delete money that was inside the channel.
+    true = (-1 < (channel:bal2(OldChannel)+Amount)),
     NewChannel = channel:update(From, CID, Channels, NewCNonce, 0, 0, Amount, spk:delay(SPK), NewHeight), 
     NewChannels = channel:write(NewChannel, Channels),
-
-    %Account1 = account:update(Acc1, Accounts, 0, none, NewHeight),
-    %Account2 = account:update(Acc2, Accounts, 0, none, NewHeight),
     ID = Tx#cs.from,
     Account = account:update(ID, Accounts, -Fee, Nonce, NewHeight),
-    %Accounts2 = account:write(Accounts, Account1),
-    %Accounts3 = account:write(Accounts2, Account3),
     NewAccounts = account:write(Accounts, Account), 
-   {NewChannels, NewAccounts}. 
+    Trees2 = trees:update_channels(Trees, NewChannels),
+    trees:update_accounts(Trees2, NewAccounts).
 		      

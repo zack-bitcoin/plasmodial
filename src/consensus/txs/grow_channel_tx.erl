@@ -1,5 +1,5 @@
 -module(grow_channel_tx).
--export([doit/4, make/7, good/1]).
+-export([doit/3, make/7, good/1]).
 -record(gc, {acc1 = 0, acc2 = 0, fee = 0, nonce = 0, inc1 = 0, inc2 = 0, rent = 0, channel_nonce = none, id = -1}).
 good(_Tx) ->
     %make sure they aren't taking our money.
@@ -19,8 +19,10 @@ make(ID,Accounts,Channels,Inc1,Inc2,Rent,Fee) ->
 	     inc2 = Inc2, rent = Rent},
     {Tx, [CProof, Proof1, Proof2]}.
     
-doit(Tx,Channels,Accounts,NewHeight) ->
+doit(Tx,Trees,NewHeight) ->
     %it already exists with these two accounts.
+    Channels = trees:channels(Trees),
+    Accounts = trees:accounts(Trees),
     ID = Tx#gc.id,
     {_, OldChannel, _} = channel:get(ID, Channels),
     0 = channel:amount(OldChannel),
@@ -42,6 +44,7 @@ doit(Tx,Channels,Accounts,NewHeight) ->
     Acc2 = account:update(Aid2, Accounts, -Inc2, none, NewHeight),
     Accounts2 = account:write(Accounts, Acc1),
     NewAccounts = account:write(Accounts2, Acc2),
-    {NewChannels, NewAccounts}.
+    Trees2 = trees:update_channels(Trees, NewChannels),
+    trees:update_accounts(Trees2, NewAccounts).
     
     

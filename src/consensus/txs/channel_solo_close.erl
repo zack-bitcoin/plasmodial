@@ -1,5 +1,5 @@
 -module(channel_solo_close).
--export([doit/4, make/6, scriptpubkey/1, next_ss/7]).
+-export([doit/3, make/6, scriptpubkey/1, next_ss/7]).
 -record(csc, {from, nonce, fee = 0, 
 	      scriptpubkey, scriptsig}).
 
@@ -20,7 +20,9 @@ make(From, Fee, ScriptPubkey, ScriptSig, Accounts, Channels) ->
 	      scriptsig = ScriptSig},
     {Tx, [Proof1, Proofc]}.
 
-doit(Tx, Channels, Accounts, NewHeight) ->
+doit(Tx, Trees, NewHeight) ->
+    Channels = trees:channels(Trees),
+    Accounts = trees:accounts(Trees),
     From = Tx#csc.from, 
     SPK = Tx#csc.scriptpubkey,
     CID = spk:cid(testnet_sign:data(SPK)),
@@ -50,7 +52,8 @@ doit(Tx, Channels, Accounts, NewHeight) ->
     Facc = account:update(From, Accounts, -Tx#csc.fee, Tx#csc.nonce, NewHeight),
     NewAccounts = account:write(Accounts, Facc),
     spawn(fun() -> check_slash(From, Acc1, Acc2, SS, SPK, NewAccounts, NewChannels, NewCNonce) end), %If our channel is closing somewhere we don't like, then we need to use a channel_slash transaction to stop them and save our money.
-    {NewChannels, NewAccounts}.
+    Trees2 = trees:update_channels(Trees, NewChannels),
+    trees:update_accounts(Trees2, NewAccounts).
 
 check_slash(From, Acc1, Acc2, TheirSS, SSPK, Accounts, Channels, TheirNonce) ->
     %if our partner is trying to close our channel without us, and we have a ScriptSig that can close the channel at a higher nonce, then we should make a channel_slash_tx to do that.
