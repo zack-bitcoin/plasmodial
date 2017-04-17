@@ -34,7 +34,7 @@ init([]) ->
     Children = child_maker(?keys),
     HB = constants:height_bits(),
     Tries = [
-	     tree_child(accounts, KL, constants:account_size()),
+	     tree_child(accounts, KL, constants:account_size(), KL*2),
 	     tree_child(channels, KL, constants:channel_size()),
 	     tree_child(existence, FullLength, HS),
 	     tree_child(oracles, KL, ((KL div 8) + 2 + (HB div 8) + (2*HS)), (KL div 8)),

@@ -101,7 +101,7 @@ orders_bits() -> 32.
 	     (height_bits()*2) + 
 	     channel_entropy() + channel_delay_bits())).
 account_size() ->    
-	(balance_bits() + height_bits() + account_nonce_bits() + acc_bits() + key_length()) div 8.
+	((balance_bits() + height_bits() + account_nonce_bits() + acc_bits() + key_length()) div 8) + (2*hash_size()).
 channel_size() ->    
     (?ChannelSizeWithoutPadding) div 8.
 existence_size() -> acc_bits().%hash_length*8

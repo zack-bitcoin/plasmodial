@@ -2,7 +2,7 @@
 %Each account has a tree of shares. 
 %The shares are stored by share id. The id of a share determines it's difficulty. You can own either a negative, positive, or zero amount of each type of share. Shares are transferable
 -export([test/0, change_amount/2, id/1, amount/1,
-	 get/2, write/2]).
+	 get/2, write/2, root_hash/1]).
 -record(share, {id, amount}).
 -define(name, shares).
 
@@ -41,6 +41,8 @@ write(A, Tree) ->
     ID = A#share.id,
     X = serialize(A),
     trie:put(ID, X, 0, Tree, ?name).
+root_hash(Root) ->
+    trie:root_hash(?name, Root).
 	    
 
 test() ->

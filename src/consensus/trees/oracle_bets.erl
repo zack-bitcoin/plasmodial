@@ -1,6 +1,6 @@
 -module(oracle_bets).
 -export([test/0, new/2, increase/2, id/1, amount/1, 
-	 write/2, get/2]).
+	 write/2, get/2, root_hash/1]).
 %Each account has a tree of oracle bets. Oracle bets are not transferable. Once an oracle is settled, the bets in it can be converted to shares.
 -record(bet, {id, amount}).
 -define(name, oracle_bets).
@@ -35,6 +35,9 @@ get(ID, Tree) ->
 	    L -> deserialize(leaf:value(L))
 	end,
     {X, V, Proof}.
+root_hash(Accounts) ->
+    trie:root_hash(accounts, Accounts).
+
 test() ->
     C = new(1, 100),
     ID = C#bet.id,
