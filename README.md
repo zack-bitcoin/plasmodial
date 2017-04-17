@@ -1,4 +1,4 @@
-æternity
+Plasmodial
 ==========
 
 This is the code used for the testnet for the [æternity](https://aeternity.com) project.
@@ -86,4 +86,4 @@ easy:off().
 
 
 ### Else
-If you want to know more, check out our whitepaper on [aeternity.com](https://aeternity.com) and get in touch with us via [Gitter Chat](https://gitter.im/aeternity?Lobby) or write us (emails in whitepaper). 
+If you want to know more, get in touch with us via [Gitter Chat](https://gitter.im/aeternity?Lobby)
