@@ -1,7 +1,8 @@
-These are the 17 types of transaction that can be in blocks.
+These are the 18 types of transaction that can be in blocks.
 
-3 transactions for accounts:
+4 transactions for accounts:
 * account_new
+* account_spend
 * account_delete
 * account_repo
 
@@ -27,12 +28,16 @@ These are the 17 types of transaction that can be in blocks.
 
 # account_new
 
-This creates a new account on the blockchain and gives it some tokens.
+This creates a new account on the blockchain and gives it some tokens and possibly some shares.
 The account loses a little money every block. This stops attackers from making tons of accounts to spam the network.
+
+# account_spend
+
+Spends AE tokens and/or shares to a different account.
 
 # account_delete
 
-This deletes an account on the blockchain and sends all of it's money to a different account.
+This deletes an account on the blockchain and sends all of it's AE tokens and shares to a different account.
 
 # account_recycle
 

@@ -103,16 +103,16 @@ orders_bits() -> 32.
 -define(ActiveOraclesSize,
 	(height_bits() + (hash_size()*8) + key_length())).
 		       
-account_padding() ->    
-    8 - (?AccountSizeWithoutPadding rem 8).
-channel_padding() ->
-    8 - (?ChannelSizeWithoutPadding rem 8).
+%account_padding() ->    
+%    8 - (?AccountSizeWithoutPadding rem 8).
+%channel_padding() ->
+%    8 - (?ChannelSizeWithoutPadding rem 8).
 active_oracles_padding() ->
     8 - (?ActiveOraclesSize rem 8).
 account_size() ->    
     (?AccountSizeWithoutPadding) div 8.
 channel_size() ->    
-    (?ChannelSizeWithoutPadding + channel_padding()) div 8.
+    (?ChannelSizeWithoutPadding) div 8.
 existence_size() -> acc_bits().%hash_length*8
 active_oracles_size() ->
     (?ActiveOraclesSize + active_oracles_padding()) div 8.

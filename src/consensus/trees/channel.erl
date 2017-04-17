@@ -85,7 +85,6 @@ serialize(C) ->
     BAL = constants:balance_bits(),
     HEI = constants:height_bits(),
     NON = constants:channel_nonce_bits(),
-    Pad = constants:channel_padding(),
     KL = id_size(),
     ENT = constants:channel_entropy(),
     CID = C#channel.id,
@@ -107,14 +106,12 @@ serialize(C) ->
        (C#channel.last_modified):HEI,
        Entropy:ENT,
        (C#channel.delay):Delay,
-       (C#channel.slash_reward):BAL,
-       0:Pad>>.
+       (C#channel.slash_reward):BAL>>.
 deserialize(B) ->
     ACC = constants:acc_bits(),
     BAL = constants:balance_bits(),
     HEI = constants:height_bits(),
     NON = constants:channel_nonce_bits(),
-    Pad = constants:channel_padding(),
     KL = constants:key_length(),
     ENT = constants:channel_entropy(),
     Delay = constants:channel_delay_bits(),
@@ -129,8 +126,7 @@ deserialize(B) ->
        B7:HEI,
        B11:ENT,
        B12:Delay,
-       B13:BAL,
-       _:Pad>> = B,
+       B13:BAL>> = B,
     #channel{id = ID, acc1 = B1, acc2 = B2, 
 	     bal1 = B3, bal2 = B4, amount = B8-constants:half_bal(),
 	     nonce = B5, timeout_height = B6, 
