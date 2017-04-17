@@ -1,5 +1,5 @@
 -module(account).
--export([serialize/1,deserialize/1,new/4,nonce/1,write/2,get/2,update/5,addr/1,id/1,balance/1,root_hash/1,now_balance/3,delete/2,test/0]).
+-export([new/4,nonce/1,write/2,get/2,update/5,addr/1,id/1,balance/1,root_hash/1,now_balance/3,delete/2,test/0]).
 -record(acc, {balance = 0, %amount of money you have
 	      nonce = 0, %increments with every tx you put on the chain. 
 	      height = 0,  %The last height at which you paid the tax
@@ -37,16 +37,16 @@ serialize(A) ->
     Addr = A#acc.addr,
     Baddr = testnet_sign:address2binary(Addr),
     SizeAddr = size(Baddr),
-    SizeAddr = hash:hash_depth(),
+    SizeAddr = constants:hash_size(),
     Nbits = constants:account_nonce_bits(),
-    AP = constants:account_padding(),
-    KL = constants:key_length(),
+    KL = key_length(),
+    ID = A#acc.id,
+    true = (ID - 1) < math:pow(2, KL),
     Out = <<(A#acc.balance):BAL, 
 	    (A#acc.nonce):(Nbits), 
 	    (A#acc.height):HEI,
-	    (A#acc.id):KL,
-	    Baddr/binary,
-	    0:AP>>,
+	    ID:KL,
+	    Baddr/binary>>,
     Size = size(Out),
     Size = constants:account_size(),
     Out.
@@ -54,25 +54,27 @@ serialize(A) ->
 deserialize(A) ->
     BAL = constants:balance_bits(),
     HEI = constants:height_bits(),
-    HD = hash:hash_depth()*8,
+    HD = constants:hash_size()*8,
     Nbits = constants:account_nonce_bits(),
-    AP = constants:account_padding(),
     KL = constants:key_length(),
     <<B1:BAL,
       B2:Nbits,
       B4:HEI,
       B5:KL,
-      B6:HD,
-      _:AP>> = A,
+      B6:HD>> = A,
     #acc{balance = B1, nonce = B2, height = B4, id = B5, addr = testnet_sign:binary2address(<<B6:HD>>)}.
     
 write(Root, Account) ->%These are backwards.
     ID = Account#acc.id,
     M = serialize(Account),
-    trie:put(ID, M, Root, accounts).%returns a pointer to the new root.
+    trie:put(ID, M, 0, Root, accounts).%returns a pointer to the new root.
 delete(ID, Accounts) ->
     trie:delete(ID, Accounts, accounts).
+key_length() ->
+    constants:key_length().
 get(Id, Accounts) ->
+    true = Id > 0,
+    true = Id  < math:pow(2, key_length()),
     {RH, Leaf, Proof} = trie:get(Id, Accounts, accounts),
     V = case Leaf of
 	    empty -> empty;

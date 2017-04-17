@@ -6,20 +6,27 @@ start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, ok, []).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 terminate(_, _) -> io:format("died!"), ok.
 handle_info(_, X) -> {noreply, X}.
-handle_cast(_, X) -> {noreply, X}.
-handle_call({absorb, SignedTx}, _From, X) ->
+handle_cast({absorb, SignedTx}, X) ->
     Tx = testnet_sign:data(SignedTx),
     Fee = element(4, Tx),
     true = Fee > free_constants:minimum_tx_fee(),
-    %make sure the fee is big enough.
-    {Accounts, Channels, Height, _Txs} = tx_pool:data(),
+    {Accounts, Channels, Height, Txs} = tx_pool:data(),
     true = testnet_sign:verify(SignedTx, Accounts),
-    {NewChannels, NewAccounts} = 
-	txs:digest([SignedTx], Channels, Accounts, Height+1),
-    tx_pool:absorb_tx(NewChannels, NewAccounts, SignedTx),
-    {reply, 0, X}.
-%handle_call(_, _From, X) -> {reply, X, X}.
+    B = is_in(SignedTx, Txs), %this is very ugly. once we have a proper CLI we can get rid of this crutch.
+    if
+	B -> ok;
+	true ->
+	    {NewChannels, NewAccounts} = 
+		txs:digest([SignedTx], Channels, Accounts, Height+1),
+	    tx_pool:absorb_tx(NewChannels, NewAccounts, SignedTx)
+    end,
+    {noreply, X};
+handle_cast(_, X) -> {noreply, X}.
+handle_call(_, _From, X) -> {reply, X, X}.
     
 absorb(SignedTx) -> 
-    gen_server:call(?MODULE, {absorb, SignedTx}).
+    gen_server:cast(?MODULE, {absorb, SignedTx}).
 
+is_in(A, [A|_]) -> true;
+is_in(_, []) -> false;
+is_in(A, [_|T]) -> is_in(A, T).

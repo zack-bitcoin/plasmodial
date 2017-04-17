@@ -4,16 +4,20 @@
 %-define(InitialCoins, round(math:pow(2, 48)) - 1).
 %2^74 bits is 25 bitcoin =~ $10,000
 %2^64 bits is $10
+token_decimals() -> 100000000.
+default_port() -> 8040.
 key_length() ->
-    11. %so at most, we could store 16^11 =~ 17.6 trillion accounts and channels.
+    48. %so at most, we could store 16^11 =~ 17.6 trillion accounts and channels.
 trie_size() ->
     50000. %we can adjust this many accounts and channels per block.
 -define(InitialCoins, round(math:pow(2, 41)) - 1).
 initial_coins() -> ?InitialCoins.
 block_reward() -> round(math:pow(2, 29)) - 1.
-initial_difficulty() -> %1*256.%for testing purposes only
-5940.%about 300 seconds on my lenovo AMD Athlon Neo X2 L325 / 1.5 GHz using a single core.
-%20*256 ~20 seconds %2 seconds is 16*256
+initial_difficulty() -> 12*256.%for testing purposes only
+%6452.
+difficulty_bits() -> 24.
+
+hash_size() -> 12.
 
 finality() -> 26.%/docs/security.py explains why.
 address_entropy() -> 96.
@@ -22,11 +26,24 @@ master_pub() -> <<"BMs9FJOY3/h4Ip+lah0Rc4lZDEBbV3wHDZXtqUsWS1kz88bnBr18Q52HnuzdS
 master_address() ->
     testnet_sign:pubkey2address(master_pub()).
 max_size() -> 2000000000.%should be 2 gigabytes, does not include old blocks.
-gas_limit() -> 1000000.%30,000 is enough for an oracle with 30 elements in the matrix. For example 5 oracle participants and 6 decisions.
+gas_limit() -> 1000000.
 %200,000,000 is enough to find the first 10001 prime numbers.
 backup() -> fractions:new(19, 20).
 %-define(MBS, max_size() div max_reveal() div 10).%use about 10% of size for blocks.
-max_block_size() -> 2000000.%2*26 = 52 megabytes of ram to hold blocks.
+max_block_size() -> 200000.%2*26 = 52 megabytes of ram to hold blocks.
+%this is only a limit to the size of the transactions.
+%the other block parts are also limited. Height must be an integer one greater than the previous.
+%prev_hash must be the output of a hash function, which is fixed sized.
+%channels is the root of a trie, which is the output of a hash function.
+%accounts is the root of a trie.
+%mines_block must point to an account id, which is limited, or a tuple of an account id and an address, which is limited in the account:serialize function.
+% time must be less than the current time. and greater than 0.
+% difficulty must be calculated from the previous difficulty.
+% the comment must be less than 140 bytes.
+% the magic number is fixed.
+
+%so, the block is limited in size
+
 %-define(ConsensusBytePrice, initial_coins() div max_size()).%instead we should have a maximum number of bytes per block, and garbage collect old blocks.
 %$consensus_byte_price() -> ?ConsensusBytePrice.
 -define(MaxAddress, max_size() div 5 div 85).%use about 20% of space to store addresses. Each one is 85 bytes
@@ -65,30 +82,40 @@ root() -> "data/".
 block_hashes() -> root() ++ "block_hashes.db".
 keys() -> root() ++ "keys.db".
 top() -> root() ++ "top.db".
+channel_manager() -> root() ++ "channel_manager.db".
 word_size() -> 100000.
-
-
 balance_bits() -> 48.%total number of coins is 2^(balance_bits()).
-acc_bits() -> trie_hash:hash_depth()*8.%total number of accounts is 2^(acc_bits()) 800 billion.
+half_bal() -> round(math:pow(2, balance_bits()-1)).
+acc_bits() -> hash_size()*8.%total number of accounts is 2^(acc_bits()) 800 billion.
 height_bits() -> 32. %maximum number of blocks is 2^this
-account_nonce_bits() -> 20.%maximum number of times you can update an account's state is 2^this.
-channel_nonce_bits() -> 30.%maximum number of times you can update a channel's state is 2^this.
+account_nonce_bits() -> 24.%maximum number of times you can update an account's state is 2^this.
+channel_nonce_bits() -> 32.%maximum number of times you can update a channel's state is 2^this.
 channel_rent_bits() -> 8.
-		       
--define(AccountSizeWithoutPadding, (balance_bits() + height_bits() + account_nonce_bits() + acc_bits() + key_length())).
+channel_delay_bits() -> 32. %2^this is the maximum amount of blocks you could have to channel_slash if your channel partner tries to cheat.
+orders_bits() -> 32.
+-define(AccountSizeWithoutPadding, 
+	(balance_bits() + height_bits() + account_nonce_bits() + acc_bits() + key_length())).
 -define(ChannelSizeWithoutPadding, 
 	(key_length() + (acc_bits()*2) + 
-	     (balance_bits()*2) + channel_nonce_bits() + 
-	     (height_bits()*2) + channel_rent_bits() + 
-	     1 + 2 + channel_entropy())).
+	     (balance_bits()*4) + channel_nonce_bits() + 
+	     (height_bits()*2) + 
+	     channel_entropy() + channel_delay_bits())).
+-define(ActiveOraclesSize,
+	(height_bits() + (hash_size()*8) + key_length())).
+		       
 account_padding() ->    
     8 - (?AccountSizeWithoutPadding rem 8).
 channel_padding() ->
     8 - (?ChannelSizeWithoutPadding rem 8).
+active_oracles_padding() ->
+    8 - (?ActiveOraclesSize rem 8).
 account_size() ->    
-    (?AccountSizeWithoutPadding + account_padding()) div 8.
+    (?AccountSizeWithoutPadding) div 8.
 channel_size() ->    
     (?ChannelSizeWithoutPadding + channel_padding()) div 8.
+existence_size() -> acc_bits().%hash_length*8
+active_oracles_size() ->
+    (?ActiveOraclesSize + active_oracles_padding()) div 8.
 
 channel_rent() -> account_rent().
 account_rent() -> round(math:pow(2, 13)).
@@ -105,15 +132,30 @@ block_time() ->
 time_units() -> %1000 = 1 second, 100 = 0.1 seconds
    100. 
 start_time() -> 14825749780.
+time_bits() -> 32.
+% Seconds_130_years = 60*60*24*365.24
+% 32 =~ math:log(130*60*60*24*365.24)/math:log(2). 
+    
     
 channel_entropy() -> 16. %Channel contracts only work for a channel with the same 2 account addresses, and with the same channel_entropy that has this many bits.
+%this is like another channel nonce, but we only increment it if the channel gets closed and re-created.
 
 fun_limit() -> 1000.
 var_limit() -> 10000.
 
 peers() ->
     [].%[{IP, Port}| ...]
-    
+comment_limit() -> %When a miner mines a block, they can set this many bytes to whatever they want.
+    140.
+magic() -> 1.
+magic_bits() -> 16.%so we can update it more than 60000 times.
+server_ip() -> {46,101,103,165}.
+server_port() -> 8080.
+
+block_creation_maturity() ->    
+    100.
+block_time_after_median() ->
+    100.
     
 
 test() ->

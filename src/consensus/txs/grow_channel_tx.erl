@@ -1,7 +1,12 @@
 -module(grow_channel_tx).
--export([doit/4, make/7]).
+-export([doit/4, make/7, good/1]).
 -record(gc, {acc1 = 0, acc2 = 0, fee = 0, nonce = 0, inc1 = 0, inc2 = 0, rent = 0, channel_nonce = none, id = -1}).
-
+good(_Tx) ->
+    %make sure they aren't taking our money.
+    %check that it is still meeting the min_channel_ratio.
+    %check that it is a valid transaction.
+    true.
+    
 make(ID,Accounts,Channels,Inc1,Inc2,Rent,Fee) ->
     {_, C, CProof} = channel:get(ID, Channels),
     A1 = channel:acc1(C),
@@ -18,6 +23,7 @@ doit(Tx,Channels,Accounts,NewHeight) ->
     %it already exists with these two accounts.
     ID = Tx#gc.id,
     {_, OldChannel, _} = channel:get(ID, Channels),
+    0 = channel:amount(OldChannel),
     Aid1 = channel:acc1(OldChannel),
     Aid2 = channel:acc2(OldChannel),
     ID = channel:id(OldChannel),
@@ -27,10 +33,10 @@ doit(Tx,Channels,Accounts,NewHeight) ->
     Inc1 = Tx#gc.inc1,
     Inc2 = Tx#gc.inc2,
     true = Inc1 + Inc2 >= 0,
-    Rent = Tx#gc.rent,
+    %Rent = Tx#gc.rent,
     CNonce = Tx#gc.channel_nonce,
-    0 = channel:mode(OldChannel),
-    NewChannel = channel:update(ID, Channels, CNonce, Rent, Inc1, Inc2, 0, channel:delay(OldChannel), NewHeight),
+    0 = channel:amount(OldChannel),
+    NewChannel = channel:update(0, ID, Channels, CNonce, Inc1, Inc2, 0, channel:delay(OldChannel), NewHeight),
     NewChannels = channel:write(NewChannel, Channels),
     Acc1 = account:update(Aid1, Accounts, -Inc1, Tx#gc.nonce, NewHeight),
     Acc2 = account:update(Aid2, Accounts, -Inc2, none, NewHeight),

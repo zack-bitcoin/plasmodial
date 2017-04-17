@@ -20,6 +20,7 @@ terminate(_, X) ->
 handle_info(_, X) -> {noreply, X}.
 handle_cast({add, H}, X) ->
     N = i_insert(H, X),
+    db:save(?LOC, N),%This line is only necessary for power failures
     {noreply, N};
 handle_cast(_, X) -> {noreply, X}.
 handle_call({check, H}, _From, X) ->
@@ -28,11 +29,11 @@ handle_call({check, H}, _From, X) ->
 handle_call(_, _From, X) -> {reply, X, X}.
 
 add(X) -> 
-    true = size(X) == hash:hash_depth(),
+    true = size(X) == constants:hash_size(),
     gen_server:cast(?MODULE, {add, X}).
 
 check(X) ->
-    true = size(X) == hash:hash_depth(),
+    true = size(X) == constants:hash_size(),
     gen_server:call(?MODULE, {check, X}).
 
 i_new() ->

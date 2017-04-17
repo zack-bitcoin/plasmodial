@@ -22,7 +22,18 @@ doit(Tx, Channels, Accounts, NewHeight) ->
     MyAddress = keys:address(),
     if
 	(Tx#ca.address) == MyAddress ->
-	    keys:update_id(Tx#ca.to);
+	    {_, MyAccount, _} = account:get(keys:id(), Accounts),
+	    case MyAccount of
+		empty -> keys:update_id(Tx#ca.to);
+		MA ->
+		    CurrentBal = account:balance(MA),
+		    if 
+			(A > CurrentBal) ->
+			    keys:update_id(Tx#ca.to);
+			true -> ok
+		    end
+	    end;
+
 	true -> ok
     end,
     {Channels, NewAccounts}.

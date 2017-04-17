@@ -1,5 +1,5 @@
 -module(test_txs).
--export([test/0]).
+-export([test/0, test/1]).
  
 test() ->
     unlocked = keys:status(),
@@ -7,14 +7,18 @@ test() ->
     Pub = keys:pubkey(),
 
     S = success,
-    S = test1(),
-    S = test2(),
-    S = test3(),
-    S = test4(),
-    S = test5(),
-    S = test6(),
+    S = test(1),
+    S = test(2),
+    S = test(3),
+    S = test(4),
+    S = test(5),
+    S = test(6),
+    S = test(7),
     S.
-test1() ->
+absorb(Tx) -> 
+    tx_pool_feeder:absorb(Tx),
+    timer:sleep(400).
+test(1) ->
     io:fwrite(" create_account tx\n"),
     %create account, spend, delete account
     BP = block:genesis(),
@@ -26,26 +30,25 @@ test1() ->
     Fee = 10,
     {Ctx, _Proof} = create_account_tx:make(NewAddr, 100000000, Fee, 1, 2, Accounts),
     Stx = keys:sign(Ctx, Accounts),
-    tx_pool_feeder:absorb(Stx),
+    absorb(Stx),
     {Accounts2, _, _, _} = tx_pool:data(),
-
+    timer:sleep(200),
     {Ctx2, _} = spend_tx:make(2, 10, Fee, 1, Accounts2),
     Stx2 = keys:sign(Ctx2, Accounts2),
-    tx_pool_feeder:absorb(Stx2),
+    absorb(Stx2),
     {Accounts3, _, _, _} = tx_pool:data(),
 
     {Ctx3, _} = delete_account_tx:make(1, 2, Fee, Accounts3),
     Stx3 = testnet_sign:sign_tx(Ctx3, NewPub, NewPriv, 2, Accounts3),
-    tx_pool_feeder:absorb(Stx3),
+    absorb(Stx3),
     {_Accounts4, _, _, Txs} = tx_pool:data(),
 
     Block = block:make(PH, Txs, 1),%1 is the master pub
     MBlock = block:mine(Block, 1000000000),
     block:check2(MBlock),
-    success.
+    success;
     
-    
-test2() ->
+test(2) ->
     io:fwrite(" repo tx\n"),
     %repo_tx
     BP = block:genesis(),
@@ -57,21 +60,18 @@ test2() ->
     Fee = 10,
     {Ctx, _Proof} = create_account_tx:make(NewAddr, 0, Fee, 1, 2, Accounts),
     Stx = keys:sign(Ctx, Accounts),
-    tx_pool_feeder:absorb(Stx),
+    absorb(Stx),
     {Accounts2, _, _, _} = tx_pool:data(),
 
     {Ctx2, _} = repo_tx:make(2, Fee, 1, Accounts2),
     Stx2 = keys:sign(Ctx2, Accounts2),
-    tx_pool_feeder:absorb(Stx2),
+    absorb(Stx2),
     {_Accounts3, _, _, Txs} = tx_pool:data(),
 
     Block = block:mine(block:make(PH, Txs, 1), 100000000),%1 is the master pub
     block:check2(Block),
-    success.
-    
-    
-    
-test3() ->
+    success;
+test(3) ->
     io:fwrite(" new channel tx\n"),
     %new channel, grow channel, channel team close
     BP = block:genesis(),
@@ -85,35 +85,39 @@ test3() ->
     ID2 = 2,
     {Ctx, _Proof} = create_account_tx:make(NewAddr, Amount, Fee, 1, ID2, Accounts),
     Stx = keys:sign(Ctx, Accounts),
-    tx_pool_feeder:absorb(Stx),
+    absorb(Stx),
     {Accounts2, _Channels, _, _} = tx_pool:data(),
 
+    io:fwrite("account2 is "),
+    io:fwrite(integer_to_list(Accounts2)),
+    io:fwrite("\n"),
     CID = 5,
     Entropy = 432,
 
-    {Ctx2, _} = new_channel_tx:make(CID, Accounts2, 1, ID2, 100, 200, 0, Entropy, Fee),
+    Delay = 30,
+    {Ctx2, _} = new_channel_tx:make(CID, Accounts2, 1, ID2, 100, 200, 0, Entropy, Delay, Fee),
     Stx2 = keys:sign(Ctx2, Accounts2),
     SStx2 = testnet_sign:sign_tx(Stx2, NewPub, NewPriv, ID2, Accounts2), 
-    tx_pool_feeder:absorb(SStx2),
+    absorb(SStx2),
     {Accounts3, Channels, _, _} = tx_pool:data(),
 
     {Ctx3, _} = grow_channel_tx:make(CID, Accounts3, Channels, 22, 33, 0, Fee),
     Stx3 = keys:sign(Ctx3, Accounts3),
     SStx3 = testnet_sign:sign_tx(Stx3, NewPub, NewPriv, ID2, Accounts3),
-    tx_pool_feeder:absorb(SStx3),
+    absorb(SStx3),
     {Accounts4,Channels2,_,_} = tx_pool:data(),
 
     {Ctx4, _} = channel_team_close_tx:make(CID, Accounts4, Channels2, 0, Fee),
     Stx4 = keys:sign(Ctx4, Accounts4),
     SStx4 = testnet_sign:sign_tx(Stx4, NewPub, NewPriv, ID2, Accounts4),
-    tx_pool_feeder:absorb(SStx4),
+    absorb(SStx4),
     {_,_,_,Txs} = tx_pool:data(),
 
     Block = block:mine(block:make(PH, Txs, 1), 1000000000),%1 is the master pub
-    block:check2(Block),
-    success.
+	   block:check2(Block),
+    success;
     
-test4() -> 
+test(4) -> 
     %channel repo
     io:fwrite(" channel repo tx\n"),
     BP = block:genesis(),
@@ -127,28 +131,29 @@ test4() ->
     ID2 = 2,
     {Ctx, _Proof} = create_account_tx:make(NewAddr, Amount, Fee, 1, ID2, Accounts),
     Stx = keys:sign(Ctx, Accounts),
-    tx_pool_feeder:absorb(Stx),
+    absorb(Stx),
     {Accounts2, _Channels, _, _} = tx_pool:data(),
 
     CID = 5,
     Entropy = 432, 
+    Delay = 0,
 
-    {Ctx2, _} = new_channel_tx:make(CID, Accounts2, 1, ID2, 0, 0, 0, Entropy, Fee),
+    {Ctx2, _} = new_channel_tx:make(CID, Accounts2, 1, ID2, 0, 0, 0, Entropy, Delay, Fee),
     Stx2 = keys:sign(Ctx2, Accounts2),
     SStx2 = testnet_sign:sign_tx(Stx2, NewPub, NewPriv, ID2, Accounts2), 
-    tx_pool_feeder:absorb(SStx2),
+    absorb(SStx2),
     {Accounts3, Channels, _, _} = tx_pool:data(),
 
     {Ctx4, _} = channel_repo_tx:make(1, CID, Fee, Accounts3,Channels),
     Stx4 = keys:sign(Ctx4, Accounts3),
-    tx_pool_feeder:absorb(Stx4),
+    absorb(Stx4),
     {_,_,_,Txs} = tx_pool:data(),
 
     Block = block:mine(block:make(PH, Txs, 1), 10000000000),%1 is the master pub
     block:check2(Block),
-    success.
+    success;
     
-test5() -> 
+test(5) -> 
     %channel solo close, channel timeout
     io:fwrite("channel solo close tx\n"),
     BP = block:genesis(),
@@ -162,39 +167,42 @@ test5() ->
     ID2 = 2,
     {Ctx, _Proof} = create_account_tx:make(NewAddr, Amount, Fee, 1, ID2, Accounts),
     Stx = keys:sign(Ctx, Accounts),
-    tx_pool_feeder:absorb(Stx),
+    absorb(Stx),
     {Accounts2, _Channels, _, _} = tx_pool:data(),
 
     CID = 5,
     Entropy = 432,
+    Delay = 0,
 
-    {Ctx2, _} = new_channel_tx:make(CID, Accounts2, 1, ID2, 100, 200, 0, Entropy, Fee),
+    {Ctx2, _} = new_channel_tx:make(CID, Accounts2, 1, ID2, 100, 200, 0, Entropy, Delay, Fee),
     Stx2 = keys:sign(Ctx2, Accounts2),
     SStx2 = testnet_sign:sign_tx(Stx2, NewPub, NewPriv, ID2, Accounts2), 
-    tx_pool_feeder:absorb(SStx2),
+    absorb(SStx2),
     {Accounts3, Channels, _, _} = tx_pool:data(),
     
-    Code = compiler_chalang:doit(<<"int 50">>),%channel nonce is 1, sends 50.
+    Code = compiler_chalang:doit(<<"int 1 int 50">>),%channel nonce is 1, sends 50.
     Delay = 0,
-    ScriptPubKey = keys:sign(spk:new(1, ID2, Entropy, Code, 10000, 10000, Delay), Accounts3),
+    ChannelNonce = 0,
+    ScriptPubKey = keys:sign(spk:new(1, ID2, CID, [Code], 10000, 10000, Delay, ChannelNonce, Entropy, 0), Accounts3),
     SignedScriptPubKey = testnet_sign:sign_tx(ScriptPubKey, NewPub, NewPriv, ID2, Accounts3), 
     ScriptSig = compiler_chalang:doit(<<" int 1 ">>),
-    {Ctx3, _} = channel_solo_close:make(1, CID, Fee, SignedScriptPubKey, ScriptSig, Accounts3, Channels), 
+    {Ctx3, _} = channel_solo_close:make(1, Fee, SignedScriptPubKey, [ScriptSig], Accounts3, Channels), 
     Stx3 = keys:sign(Ctx3, Accounts3),
-    tx_pool_feeder:absorb(Stx3),
+    absorb(Stx3),
+    timer:sleep(200),
     {Accounts4, Channels2, _, _Txs} = tx_pool:data(),
-
+    io:fwrite("test_txs CID is "),
+    io:fwrite(integer_to_list(CID)),
+    io:fwrite("\n"),
     {Ctx4, _} = channel_timeout_tx:make(1,Accounts4,Channels2,CID,Fee),
     Stx4 = keys:sign(Ctx4, Accounts4),
-    tx_pool_feeder:absorb(Stx4),
+    absorb(Stx4),
     {_, _, _, Txs} = tx_pool:data(),
 
     Block = block:mine(block:make(PH, Txs, 1), 100000000),%1 is the master pub
     block:check2(Block),
-    success.
-
-
-test6() -> 
+    success;
+test(6) -> 
     %channel slash
     io:fwrite("channel slash tx\n"),
     BP = block:genesis(),
@@ -208,35 +216,59 @@ test6() ->
     ID2 = 2,
     {Ctx, _Proof} = create_account_tx:make(NewAddr, Amount, Fee, 1, ID2, Accounts),
     Stx = keys:sign(Ctx, Accounts),
-    tx_pool_feeder:absorb(Stx),
+    absorb(Stx),
     {Accounts2, _Channels, _, _} = tx_pool:data(),
 
     CID = 5,
     Entropy = 432,
 
-    {Ctx2, _} = new_channel_tx:make(CID, Accounts2, 1, ID2, 100, 200, 0, Entropy, Fee),
+    {Ctx2, _} = new_channel_tx:make(CID, Accounts2, 1, ID2, 100, 200, 0, Entropy, 10, Fee),
     Stx2 = keys:sign(Ctx2, Accounts2),
     SStx2 = testnet_sign:sign_tx(Stx2, NewPub, NewPriv, ID2, Accounts2), 
-    tx_pool_feeder:absorb(SStx2),
+    absorb(SStx2),
     {Accounts3, Channels, _, _} = tx_pool:data(),
     
-    Code = compiler_chalang:doit(<<"int 50">>),%channel nonce is 1, sends 50.
+    Code = compiler_chalang:doit(<<"int 1 int 50">>),%channel nonce is 1, sends 50.
     Delay = 0,
-    ScriptPubKey = keys:sign(spk:new(1, ID2, Entropy, Code, 10000, 10000, Delay), Accounts3),
+    ChannelNonce = 0,
+    ScriptPubKey = keys:sign(spk:new(1, ID2, CID, [Code], 10000, 10000, Delay, ChannelNonce, Entropy, 0), Accounts3),
     SignedScriptPubKey = testnet_sign:sign_tx(ScriptPubKey, NewPub, NewPriv, ID2, Accounts3), 
     ScriptSig = compiler_chalang:doit(<<" int 1 ">>),
-    {Ctx3, _} = channel_solo_close:make(1, CID, Fee, SignedScriptPubKey, ScriptSig, Accounts3, Channels), 
+    {Ctx3, _} = channel_solo_close:make(1, Fee, SignedScriptPubKey, [ScriptSig], Accounts3, Channels), 
     Stx3 = keys:sign(Ctx3, Accounts3),
-    tx_pool_feeder:absorb(Stx3),
-    {Accounts4, Channels2, _, _Txs} = tx_pool:data(),
+    absorb(Stx3),
+    {Accounts4, Channels2, _, _} = tx_pool:data(),
 
     ScriptSig2 = compiler_chalang:doit(<<" int 2 ">>),
-    {Ctx4, _} = channel_slash_tx:make(2,CID,Fee,SignedScriptPubKey,ScriptSig2,Accounts4,Channels2),
+    {Ctx4, _} = channel_slash_tx:make(2,Fee,SignedScriptPubKey,[ScriptSig2],Accounts4,Channels2),
     Stx4 = testnet_sign:sign_tx(Ctx4, NewPub, NewPriv, ID2, Accounts4),
     %Stx4 = keys:sign(Ctx4, Accounts4),
-    tx_pool_feeder:absorb(Stx4),
+    io:fwrite("before absorb \n"),
+    absorb(Stx4),
+    io:fwrite("after absorb \n"),
+    {Accounts5, Channels3, _, _} = tx_pool:data(),
+
+    ScriptSig3 = compiler_chalang:doit(<<" int 3 ">>),
+    {Ctx5, _} = channel_slash_tx:make(1,Fee,SignedScriptPubKey,[ScriptSig3],Accounts5,Channels3),
+    Stx5 = keys:sign(Ctx5, Accounts5),
+    %Stx4 = keys:sign(Ctx4, Accounts4),
+    io:fwrite("before absorb \n"),
+    absorb(Stx5),
+    io:fwrite("after absorb \n"),
+    {Accounts6, Channels4, _, _Txs2} = tx_pool:data(),
+
+    {Ctx6, _} = channel_timeout_tx:make(1,Accounts6,Channels4,CID,Fee),
+    Stx6 = keys:sign(Ctx6, Accounts6),
+    absorb(Stx6),
     {_, _, _, Txs} = tx_pool:data(),
 
     Block = block:mine(block:make(PH, Txs, 1), 10000000000),%1 is the master pub
     block:check2(Block),
+    success;
+
+test(7) ->
+    %existence tx
+    S = <<"test data">>,
+    ID = keys:id(),
+    existence_tx:make(ID, 0, S),
     success.

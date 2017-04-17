@@ -12,36 +12,49 @@ sync_cron(N) -> %30000 is 30 second.
     sync_cron(N).
 
 rank_filter(P) ->
-    %probabilistically remove the higher-ranked peers,
+    %probabilistically select a peer. prefer lower ranked pers.
     P.
     
     
 sync_all([], _) -> success;
 sync_all([{IP, Port}|T], Height) ->
-    sync(IP, Port, Height),
+    spawn(fun() ->
+		  sync(IP, Port, Height)
+	  end),
     %spawn(download_blocks, sync, [IP, Port, Height]),
-    %timer:sleep(1000),
+    %timer:sleep(3000),
     sync_all(T, Height).
 sync(IP, Port, MyHeight) ->
+    io:fwrite("syncing with peer"),
     %lower their ranking
     %peers:update_score(IP, Port, peers:initial_score()),
     S = erlang:timestamp(),
-    case talker:talk({top}, IP, Port) of
-	{error, failed_connect} -> ok;
-	{ok, TopBlock, Height}  ->
-	    HH = MyHeight + 100,
-	    if
-		HH < Height ->
-		    {ok, Block} = talker:talk({block, HH}, IP, Port),
-		    trade_blocks(IP, Port, [Block], HH);
-		true ->
-		    trade_blocks(IP, Port, [TopBlock], Height)
-	    end,
-	    get_txs(IP, Port),
-	    trade_peers(IP, Port),
-	    Time = timer:now_diff(erlang:timestamp(), S),%1 second is 1000000.
-	    Score = abs(Time)*(1+abs(Height - MyHeight))
-    end.
+    io:fwrite("check top"),
+    talk({top}, IP, Port, 
+	 fun(X) ->
+		 case X of
+		     {error, failed_connect} -> 
+			 io:fwrite("failed connect"),
+			 ok;
+		     {ok, TopBlock, Height}  ->
+			 HH = MyHeight + 100,
+			 if
+			     HH < Height ->
+				 {ok, Block} = talker:talk({block, HH}, IP, Port),
+				 trade_blocks(IP, Port, [Block], HH);
+			     true ->
+				 trade_blocks(IP, Port, [TopBlock], Height),
+				 get_txs(IP, Port)
+				     
+			 end,
+			 trade_peers(IP, Port),
+			 Time = timer:now_diff(erlang:timestamp(), S),%1 second is 1000000.
+			 Score = abs(Time)*(1+abs(Height - MyHeight));
+		     X -> io:fwrite(X)
+		 end
+	 end).
+
+
     %peers:update_score(IP, Port, Score).
     %raise their ranking.
 get_blocks(_, 0, _, _, L) -> L;
@@ -55,7 +68,6 @@ trade_blocks(_IP, _Port, L, 1) ->
     sync3(L);
     %sync3(get_blocks(1, 100, IP, Port, [])++L);
 trade_blocks(IP, Port, [PrevBlock|L], Height) ->
-    io:fwrite("trade blocks\n"),
     %"nextBlock" is from earlier in the chain than prevblock. we are walking backwards
     PrevHash = block:hash(PrevBlock),
     %{ok, PowBlock} = talker:talk({block, Height}, IP, Port),
@@ -67,12 +79,17 @@ trade_blocks(IP, Port, [PrevBlock|L], Height) ->
 	    NextHash = block:hash(NextBlock),
 	    trade_blocks(IP, Port, [NextBlock|[PrevBlock|L]], Height - 1);
 	_ -> 
-	    %download 100 blocks earlier, to handle forks.
+						%download 100 blocks earlier, to handle forks.
 	    L2 = get_blocks(Height-1, free_constants:fork_tolerance(), IP, Port, []),
-	    sync3(L2++L),
-	    send_blocks(IP, Port, top:doit(), PrevHash, [], 0)
+	    case L2 of
+		error -> error;
+		_ ->
+		    sync3(L2++L),
+		    send_blocks(IP, Port, top:doit(), PrevHash, [], 0)
+	    end
     end.
 send_blocks(IP, Port, T, T, L, _N) -> 
+    %io:fwrite("finished sending blocks"),
     send_blocks2(IP, Port, L);
 send_blocks(IP, Port, TopHash, CommonHash, L, N) ->
     if
@@ -85,6 +102,7 @@ send_blocks(IP, Port, TopHash, CommonHash, L, N) ->
     end.
 send_blocks2(_, _, []) -> ok;
 send_blocks2(IP, Port, [Block|T]) -> 
+    %io:fwrite("give block !!!!!!!"),
     talker:talk({give_block, block:pow_block(Block)}, IP, Port),
     send_blocks2(IP, Port, T).
     
@@ -98,12 +116,18 @@ absorb_txs([H|T]) ->
     tx_pool_feeder:absorb(H),
     absorb_txs(T).
 talk(CMD, IP, Port, F) ->
+    talk(CMD, IP, Port, F, 100).
+talk(_, _, _, _, 0) -> error;
+talk(CMD, IP, Port, F, N) ->
     case talker:talk(CMD, IP, Port) of
-	{error, failed_connect} -> ok;
-	{ok, X} -> F(X)
+	{error, failed_connect} -> talk(CMD, IP, Port, F, N-1);
+	{ok, X} -> F(X);
+	X -> F(X)
+		       
     end.
 	   
 get_txs(IP, Port) ->
+    %io:fwrite("download blocks get txs\n"),
     talk({txs}, IP, Port, 
 	 fun(X) ->
 		 absorb_txs(X),

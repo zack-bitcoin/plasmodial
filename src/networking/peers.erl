@@ -2,8 +2,10 @@
 -behaviour(gen_server).
 -export([start_link/0,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2, 
 	 update/4,all/0,add/2,add/1,read/2,remove/2,
-	update_score/3, initial_score/0]).    
--record(r, {height =0, hash=0, score=100000}).%lower score is better.
+	update_score/3, initial_score/0,
+	cid/1,set_cid/3]).    
+-record(r, {height =0, hash=0, cid, score=100000}).%lower score is better.
+cid(X) -> X#r.cid.
 init(ok) -> {ok, default_peers()}.
 start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, ok, []).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
@@ -19,10 +21,16 @@ handle_cast({add, IP, Port}, X) ->
 handle_cast({score, IP, Port, N}, X) ->
     K = key(IP, Port),
     {ok, Old} = dict:find(K, X),
-    A = Old#r.score,
-    B = (A*99+N) div 100,
-    NewR = Old#r{score = B},
+    %A = Old#r.score,
+    %B = (A*99+N) div 100,
+    NewR = Old#r{score = N},
     NewX = dict:store(K, NewR, X),
+    {noreply, NewX};
+handle_cast({set_cid, IP, Port, CID}, X) ->
+    K = key(IP, Port),
+    {ok, Old} = dict:find(K, X),
+    New = Old#r{cid = CID},
+    NewX = dict:store(K, New, X),
     {noreply, NewX};
 handle_cast({update, IP, Port, Height, Hash}, X) ->
     K = key(IP, Port),
@@ -44,6 +52,8 @@ handle_call({read, IP, Port}, _From, X) ->
         {ok, Val} -> Val
     end,
     {reply, O, X}.
+set_cid(IP, Port, CID) ->
+    gen_server:cast(?MODULE, {set_cid, IP, Port, CID}).
 key(IP, Port) -> {IP, Port}.
 all() -> gen_server:call(?MODULE, all).
 add([]) -> ok;

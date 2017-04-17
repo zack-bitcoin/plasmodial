@@ -22,23 +22,31 @@ doit(Tx, Channels, Accounts, NewHeight) ->
     From = Tx#timeout.aid,
     CID = Tx#timeout.cid,
     {_, Channel, _} = channel:get(CID, Channels),
+    CA = channel:amount(Channel),
+    false = CA == 0,
     LM = channel:last_modified(Channel),
     TD = NewHeight - LM,
     true = TD >= channel:delay(Channel),
-    Mode = channel:mode(Channel),
+    %Mode = channel:mode(Channel),
     Aid1 = channel:acc1(Channel),
     Aid2 = channel:acc2(Channel),
+    Amount = channel:amount(Channel),
     Fee = Tx#timeout.fee,
-    Nonce = Tx#timeout.nonce,
-    {Mode, Acc1Fee, Acc2Fee, N1, N2} = 
-	case From of
-	    Aid1 -> {1, Fee, 0, Nonce, none};
-	    Aid2 -> {2, 0, Fee, none, Nonce}
-	end,
-    Acc1 = account:update(Aid1, Accounts, channel:bal1(Channel)-Acc1Fee, N1, NewHeight),
-    Acc2 = account:update(Aid2, Accounts, channel:bal2(Channel)-Acc2Fee, N2, NewHeight),
+    SR = channel:slash_reward(Channel),
+    Acc1 = account:update(Aid1, Accounts, channel:bal1(Channel)-Amount-SR, none, NewHeight),
+    Acc2 = account:update(Aid2, Accounts, channel:bal2(Channel)+Amount-SR, none, NewHeight),
     Accounts2 = account:write(Accounts, Acc1),
-    NewAccounts = account:write(Accounts2, Acc2),
+    Accounts3 = account:write(Accounts2, Acc2),
+    Slasher = channel:slasher(Channel),
+    Accounts4 = 
+	case Slasher of
+	    0 -> Accounts3;
+	    X ->
+		Acc3 = account:update(X, Accounts3, SR*2, none, NewHeight), 
+		accounts:write(Accounts3, Acc3)
+	end,
+    Acc4 = account:update(From, Accounts4, -Fee, none, NewHeight),
+    NewAccounts = account:write(Accounts4, Acc4),
     NewChannels = channel:delete(CID, Channels),
     {NewChannels, NewAccounts}.
 

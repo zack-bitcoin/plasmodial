@@ -2,7 +2,7 @@
 "THE BITCOIN-WARE LICENSE" (Revision 2):
 <zack.bitcoin@gmail.com> wrote this file.  It is his wish that you retain this
 notice with this stuff. You can do whatever you want with this stuff. If you
-think this stuff is worth it, you can send me bitcoin in return
+think this stuff is worth it, you can send him bitcoin in return
 1GbpRPE83Vjg73KFvTVZ4EnS2qNkiLY5TT
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 

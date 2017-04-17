@@ -1,19 +1,21 @@
 %the hard drive stores {f, pubkey, encrypted(privkey), encrypted("sanity")).
 %the ram stores either {pubkey, privkey} or {pubkey, ""} depending on if this node is locked.
 -module(keys).
+
 -behaviour(gen_server).
 -export([start_link/0,code_change/3,handle_call/3,
 	 handle_cast/2,handle_info/2,init/1,terminate/2, 
 	 pubkey/0,sign/2,raw_sign/1,load/3,unlock/1,
 	 lock/0,status/0,change_password/2,new/1,
 	 shared_secret/1,id/0,update_id/1,address/0,
-	 test/0]).
+	 test/0,format_status/2]).
 %-define(LOC(), "keys.db").
 -define(LOC(), constants:keys()).
 -define(SANE(), <<"sanity">>).
 start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, ok, []).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 terminate(_, _) -> io:fwrite("keys died"), ok.
+format_status(_,[_,_]) -> [{[], [{"State", []}]}].
 -record(f, {pub = "", priv = "", sanity = "", id = -1}).
 %sanity is only used on the hard drive, not in ram.
 init(ok) -> 
@@ -85,7 +87,14 @@ handle_info(_, X) -> {noreply, X}.
 pubkey() -> gen_server:call(?MODULE, pubkey).
 address() -> testnet_sign:pubkey2address(pubkey()).
 %sign(M) -> gen_server:call(?MODULE, {sign, M, tx_pool:accounts()}).
-sign(M, Accounts) -> gen_server:call(?MODULE, {sign, M, Accounts}).
+sign(M, Accounts) -> 
+    S = status(),
+    case S of
+	unlocked ->
+	    gen_server:call(?MODULE, {sign, M, Accounts});
+	_ -> io:fwrite("you need to unlock your account before you can sign transactions. use keys:unlock(\"password\").\n"),
+	     {error, locked}
+    end.
 raw_sign(M) -> gen_server:call(?MODULE, {raw_sign, M}).
 load(Pub, Priv, Brainwallet) -> gen_server:cast(?MODULE, {load, Pub, Priv, Brainwallet}).
 unlock(Brainwallet) -> gen_server:cast(?MODULE, {unlock, Brainwallet}).
