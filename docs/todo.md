@@ -42,6 +42,7 @@ It should be able to access everything in /src/networking/internal_handler.erl
 We should add everything from easy to internal_handler.erl
 
 We need to update download_blocks so that peers get ranked, and we spend more time talking to higher-ranked peers.
+
 There is a problem where if you crash while syncing with a peer, then you skip trying to sync with any peer lower on the list. this is very bad.
 
 make the api networking/handler be entirely encrypted. This is to protect information about the channels. https://github.com/BumblebeeBat/pink_crypto/blob/master/src/encryption.erl
@@ -57,12 +58,10 @@ It would be nice if there were some macros for chalang/src/compiler_lisp2.erl th
 
 Updates for next time we restart at a genesis block:
 
-proof of existence transaction type.
 
 each tx with a fee needs a to reference a recent hash. Everyone needs to be incentivized to make the hash as recent as possible.
 
 
 We need to reward the miner with the transaction fees, to incentivize him to include them. block:absorb_txs
-
 
 Make sure that if something was garbage collected from a merkel tree, and we try accessing the thing, it gives a different message than trying to access something that doesn't exist.
