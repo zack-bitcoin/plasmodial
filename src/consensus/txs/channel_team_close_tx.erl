@@ -25,6 +25,7 @@ doit(Tx,Trees,NewHeight) ->
     Accounts = trees:accounts(Trees),
     ID = Tx#ctc.id,
     {_, OldChannel, _} = channel:get(ID, Channels),
+    false = channel:closed(OldChannel),
     Aid1 = channel:acc1(OldChannel),
     Aid2 = channel:acc2(OldChannel),
     %ID = channel:id(OldChannel),

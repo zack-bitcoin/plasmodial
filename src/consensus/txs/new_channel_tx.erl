@@ -50,7 +50,13 @@ doit(Tx, Trees, NewHeight) ->
     Channels = trees:channels(Trees),
     Accounts = trees:accounts(Trees),
     ID = Tx#nc.id,
-    {_, empty, _} = channel:get(ID, Channels),
+    {_, OldChannel, _} = channel:get(ID, Channels),
+    true = case OldChannel of
+	       empty -> true;
+	       X ->
+		   channel:closed(OldChannel)
+		       and ((NewHeight - channel:last_modified(OldChannel)) > constants:channel_closed_time())
+	   end,
     Aid1 = Tx#nc.acc1,
     Aid2 = Tx#nc.acc2,
     false = Aid1 == Aid2,

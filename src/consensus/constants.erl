@@ -93,17 +93,14 @@ channel_nonce_bits() -> 32.%maximum number of times you can update a channel's s
 channel_rent_bits() -> 8.
 channel_delay_bits() -> 32. %2^this is the maximum amount of blocks you could have to channel_slash if your channel partner tries to cheat.
 orders_bits() -> 32.
--define(AccountSizeWithoutPadding, 
-	(balance_bits() + height_bits() + account_nonce_bits() + acc_bits() + key_length())).
--define(ChannelSizeWithoutPadding, 
-	(key_length() + (acc_bits()*2) + 
-	     (balance_bits()*4) + channel_nonce_bits() + 
-	     (height_bits()*2) + 
-	     channel_entropy() + channel_delay_bits())).
 account_size() ->    
 	((balance_bits() + height_bits() + account_nonce_bits() + acc_bits() + key_length()) div 8) + (2*hash_size()).
 channel_size() ->    
-    (?ChannelSizeWithoutPadding) div 8.
+    ((key_length() + (acc_bits()*2) + 
+	  (balance_bits()*4) + channel_nonce_bits() + 
+	  (height_bits()*2) + 
+	  channel_entropy() + channel_delay_bits()) div 8) 
+	+ 1.
 existence_size() -> acc_bits().%hash_length*8
 
 channel_rent() -> account_rent().
@@ -118,6 +115,8 @@ retarget_frequency() -> %how many blocks till we recalculate the difficulty
 block_time() -> 
     6000.
     %10.
+channel_closed_time() ->
+    60*24*60*60 div block_time(). %about 2 months, in blocks
 time_units() -> %1000 = 1 second, 100 = 0.1 seconds
    100. 
 start_time() -> 14825749780.

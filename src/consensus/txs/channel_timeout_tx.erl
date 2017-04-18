@@ -24,6 +24,7 @@ doit(Tx, Trees, NewHeight) ->
     From = Tx#timeout.aid,
     CID = Tx#timeout.cid,
     {_, Channel, _} = channel:get(CID, Channels),
+    false = channel:closed(Channel),
     CA = channel:amount(Channel),
     false = CA == 0,
     LM = channel:last_modified(Channel),
@@ -40,16 +41,11 @@ doit(Tx, Trees, NewHeight) ->
     Accounts2 = account:write(Accounts, Acc1),
     Accounts3 = account:write(Accounts2, Acc2),
     Slasher = channel:slasher(Channel),
-    Accounts4 = 
-	case Slasher of
-	    0 -> Accounts3;
-	    X ->
-		Acc3 = account:update(X, Accounts3, SR*2, none, NewHeight), 
-		accounts:write(Accounts3, Acc3)
-	end,
-    Acc4 = account:update(From, Accounts4, -Fee, none, NewHeight),
-    NewAccounts = account:write(Accounts4, Acc4),
-    NewChannels = channel:delete(CID, Channels),
+    Acc4 = account:update(From, Accounts3, -Fee, none, NewHeight),
+    NewAccounts = account:write(Accounts3, Acc4),
+    NewChannel = channel:update(Slasher, CID, Channels, none, 0, 0, CA, channel:delay(Channel), NewHeight, true),
+    NewChannels = channel:write(NewChannel, Channels),
+    %NewChannels = channel:delete(CID, Channels),
     Trees2 = trees:update_channels(Trees, NewChannels),
     trees:update_accounts(Trees2, NewAccounts).
 

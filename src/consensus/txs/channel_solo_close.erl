@@ -41,7 +41,7 @@ doit(Tx, Trees, NewHeight) ->
     false = Amount == 0,
     SR = spk:slash_reward(ScriptPubkey),
     true = NewCNonce > channel:nonce(OldChannel),
-    NewChannel = channel:update(From, CID, Channels, NewCNonce, 0, 0, Amount, spk:delay(ScriptPubkey), NewHeight),
+    NewChannel = channel:update(From, CID, Channels, NewCNonce, 0, 0, Amount, spk:delay(ScriptPubkey), NewHeight, false),
     case From of %channels can only delete money that was inside the channel.
 	%only the other person can slash, so only check that we can afford to pay it.
 	Acc1 -> true = (-1 < (channel:bal1(NewChannel)-SR-Amount));

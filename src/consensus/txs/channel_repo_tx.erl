@@ -19,6 +19,7 @@ doit(Tx, Trees, NewHeight) ->
     A = constants:delete_channel_reward(),
     Facc = account:update(From, Accounts, A, Tx#cr.nonce, NewHeight),
     {_, Channel, _} = channel:get(CID, Channels),
+    false = channel:closed(Channel),
     B = channel:bal1(Channel) + channel:bal2(Channel),
     DH = NewHeight - channel:last_modified(Channel),
     Rent = constants:channel_rent() * DH,

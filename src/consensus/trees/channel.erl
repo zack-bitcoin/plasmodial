@@ -1,10 +1,10 @@
 -module(channel).
--export([new/8,serialize/1,deserialize/1,update/9,
+-export([new/8,serialize/1,deserialize/1,update/10,
 	 write/2,get/2,delete/2,root_hash/1,
 	 acc1/1,acc2/1,id/1,bal1/1,bal2/1,
 	 last_modified/1, entropy/1,
 	 nonce/1,delay/1, amount/1, slasher/1,
-	 slash_reward/1,
+	 slash_reward/1, closed/1,
 	 test/0]).
 %This is the part of the channel that is written onto the hard drive.
 
@@ -23,7 +23,8 @@
 		  delay = 0,%this is how long you have to wait since "last_modified" to do a channel_timeout_tx.
 		  %we need to store this between a solo_close_tx and a channel_timeout_tx. That way we know we waited for long enough.
 		  slasher = 0, %this is how we remember who was the last user to do a slash on a channel. If he is the last person to slash, then he gets a reward.
-		  slash_reward = 0 %this much money is taken from each participant in the channel, and it is given to whoever does the channel_slash transaction to prevent theft.
+		  slash_reward = 0, %this much money is taken from each participant in the channel, and it is given to whoever does the channel_slash transaction to prevent theft.
+		  closed = false %when a channel is closed, set this to 1. The channel can no longer be modified, but the VM has access to the state it was closed on. So you can use a different channel to trustlessly pay whoever slashed.
 		  }%
        ).
 acc1(C) -> C#channel.acc1.
@@ -39,9 +40,10 @@ nonce(C) -> C#channel.nonce.
 delay(C) -> C#channel.delay.
 slasher(C) -> C#channel.slasher.
 slash_reward(C) -> C#channel.slash_reward.
+closed(C) -> C#channel.closed.
 
-
-update(Slasher, ID, Channels, Nonce, Inc1, Inc2, Amount, Delay, Height) ->
+update(Slasher, ID, Channels, Nonce, Inc1, Inc2, Amount, Delay, Height, Close) ->
+    true = (Close == true) or (Close == false),
     true = Inc1 + Inc2 >= 0,
     {_, Channel, _} = get(ID, Channels),
     CNonce = Channel#channel.nonce,
@@ -65,14 +67,14 @@ update(Slasher, ID, Channels, Nonce, Inc1, Inc2, Amount, Delay, Height) ->
     Bal2c = min(Bal2b, Bal1a+Bal2a),
     %true = Bal1 >= 0,
     %true = Bal2 >= 0,
-
     Channel#channel{bal1 = Bal1c,
 		    bal2 = Bal2c,
 		    amount = Amount,
 		    nonce = NewNonce,
 		    last_modified = Height,
 		    delay = Delay,
-		    slasher = Slasher
+		    slasher = Slasher,
+		    closed = Close
 		   }.
     
 new(ID, Acc1, Acc2, Bal1, Bal2, Height, Entropy, Delay) ->
@@ -95,6 +97,10 @@ serialize(C) ->
     Amount = C#channel.amount,
     HB = constants:half_bal(),
     true = Amount < HB,
+    CR = case (C#channel.closed) of
+	     true -> 1;
+	     false -> 0
+	 end,
     << CID:KL,
        (C#channel.acc1):ACC,
        (C#channel.acc2):ACC,
@@ -106,7 +112,8 @@ serialize(C) ->
        (C#channel.last_modified):HEI,
        Entropy:ENT,
        (C#channel.delay):Delay,
-       (C#channel.slash_reward):BAL>>.
+       (C#channel.slash_reward):BAL,
+       CR:8>>.
 deserialize(B) ->
     ACC = constants:acc_bits(),
     BAL = constants:balance_bits(),
@@ -126,13 +133,18 @@ deserialize(B) ->
        B7:HEI,
        B11:ENT,
        B12:Delay,
-       B13:BAL>> = B,
+       B13:BAL,
+       Closed:8>> = B,
+    CR = case Closed of
+	     0 -> false;
+	     1 -> true
+	 end,
     #channel{id = ID, acc1 = B1, acc2 = B2, 
 	     bal1 = B3, bal2 = B4, amount = B8-constants:half_bal(),
 	     nonce = B5, timeout_height = B6, 
 	     last_modified = B7,
 	     entropy = B11, delay = B12,
-	     slash_reward = B13}.
+	     slash_reward = B13, closed = CR}.
 write(Channel, Root) ->
     ID = Channel#channel.id,
     M = serialize(Channel),

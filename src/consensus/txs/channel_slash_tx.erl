@@ -50,7 +50,7 @@ doit(Tx, Trees, NewHeight) ->
     %NewChannels = channel:delete(CID, Channels),
     true = (-1 < (channel:bal1(OldChannel)-Amount)),%channels can only delete money that was inside the channel.
     true = (-1 < (channel:bal2(OldChannel)+Amount)),
-    NewChannel = channel:update(From, CID, Channels, NewCNonce, 0, 0, Amount, spk:delay(SPK), NewHeight), 
+    NewChannel = channel:update(From, CID, Channels, NewCNonce, 0, 0, Amount, spk:delay(SPK), NewHeight, false), 
     NewChannels = channel:write(NewChannel, Channels),
     ID = Tx#cs.from,
     Account = account:update(ID, Accounts, -Fee, Nonce, NewHeight),
