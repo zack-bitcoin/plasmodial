@@ -13,3 +13,11 @@ If the difficulty is above the amount written on the a share, then only the posi
 
 Owning these shares is a way to hedge against fluctuations in the price of the token.
 Looking at the market for shares is a way to predict where the price of the token is going.
+
+
+Shares don't depend on the difficulty per block, rather they depend on how much work do you have to do to make one more token.
+
+
+If the difficulty is above e^(A*N) then the positive are converting to AE and the negative are disappearing.
+If the difficulty is below e^(A*N) then the positive are disappearing and the negative are converting to AE.
+A is a constant to set the step size between types.

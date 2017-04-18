@@ -25,13 +25,15 @@ block_to_header(Block) ->
     Time = Block#block.time,
     Diff = Block#block.difficulty,
     Magic = Block#block.magic,
+    TxHash = testnet_hasher:doit(Block#block.txs),
     <<PH/binary,
       Height:(constants:height_bits()),
       Miner:(constants:acc_bits()),
       Time:(constants:time_bits()),
       Diff:(constants:difficulty_bits()),
       Magic:(constants:magic_bits()),
-      Trees/binary>>.
+      Trees/binary,
+      TxHash/binary>>.
       
 hashes(BP) ->
     BP#block_plus.prev_hashes.
@@ -350,7 +352,7 @@ mine_test() ->
 mine_blocks(0, _) -> success;
 mine_blocks(N, Times) -> 
     PH = top:doit(),
-    {_,_,_,Txs} = tx_pool:data(),
+    {_,_,Txs} = tx_pool:data(),
     ID = case {keys:pubkey(), keys:id()} of
 	     {[], X} -> io:fwrite("you need to make an account before you can mine. look at docs/new_account.md"),
 			X = 294393793232;

@@ -30,6 +30,7 @@ test1() ->
     io:fwrite("txs test\n"),
     S = test_txs:test(),
     S = existence:test(),
+    S = block:mine_test(),
     %S = inbox:test(),
     %io:fwrite("chalang test\n"),
     %S = test_chalang:test("deps/chalang/examples/"),

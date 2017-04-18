@@ -1,3 +1,5 @@
+
+
 -module(channel_slash_tx).
 -export([doit/3, make/6]).
 -record(cs, {from, nonce, fee = 0, 
