@@ -1,29 +1,51 @@
 -module(oracle_bets).
--export([test/0, new/2, increase/2, id/1, amount/1, 
-	 write/2, get/2, root_hash/1]).
+-export([test/0, new/3, increase/3, id/1,
+	 true/1, false/1, bad/1,
+	 write/2, get/2, root_hash/1, add_bet/4,
+	 remove_bet/3]).
 %Each account has a tree of oracle bets. Oracle bets are not transferable. Once an oracle is settled, the bets in it can be converted to shares.
--record(bet, {id, amount}).
+-record(bet, {id, true, false, bad}).%true, false, and bad are the 3 types of shares that can be purchased from an oracle
 -define(name, oracle_bets).
 id(X) ->
     X#bet.id.
-amount(X) ->
-    X#bet.amount.
-increase(X, A) ->
-    X#bet{amount = X#bet.amount + A}.
-new(OracleID, Amount) ->
+true(X) ->
+    X#bet.true.
+false(X) ->
+    X#bet.false.
+bad(X) ->
+    X#bet.bad.
+increase(X, Type, A) ->
+    case Type of
+	true -> X#bet{true = X#bet.true + A};
+	false -> X#bet{false = X#bet.false + A};
+	bad -> X#bet{bad = X#bet.bad + A}
+    end.
+new(ID, Type, Amount) ->
+    {A, B, C} = 
+	case Type of
+	    true -> {Amount, 0, 0};
+	    false -> {0, Amount, 0};
+	    bad -> {0, 0, Amount}
+	end, 
+    new(ID, A, B, C).
+    
+new(OracleID, True, False, Bad) ->
     %{_, X, _} = active_oracles:read(OracleID, AORoot),
     %false = X == empty,
-    #bet{id = OracleID, amount = Amount}.
+    #bet{id = OracleID, true = True, false = False,
+	 bad = Bad}.
 serialize(X) ->
     KL = constants:key_length()*8,
     BAL = constants:balance_bits(),
     <<(X#bet.id):KL,
-      (X#bet.amount):BAL>>.
+      (X#bet.true):BAL,
+      (X#bet.false):BAL,
+      (X#bet.bad):BAL>>.
 deserialize(B) ->
     KL = constants:key_length()*8,
     BAL = constants:balance_bits(),
-    <<ID:KL, A:BAL>> = B,
-    #bet{amount = A, id = ID}.
+    <<ID:KL, True:BAL, False:BAL, Bad:BAL>> = B,
+    #bet{true = True, false = False, bad = Bad, id = ID}.
 write(X, Tree) ->
     Key = X#bet.id,
     Z = serialize(X),
@@ -35,16 +57,29 @@ get(ID, Tree) ->
 	    L -> deserialize(leaf:value(L))
 	end,
     {X, V, Proof}.
-root_hash(Accounts) ->
-    trie:root_hash(accounts, Accounts).
+add_bet(Id, Type, Amount, Tree) ->
+    {_, X, _} = get(Id, Tree),
+    Y = case X of
+	    empty -> new(Id, Type, Amount);
+	    Bet -> increase(Bet, Type, Amount)
+	end,
+    write(Y, Tree).
+remove_bet(_, _, _) ->
+    ok.
+	    
+root_hash(A) ->
+    trie:root_hash(?name, A).
 
 test() ->
-    C = new(1, 100),
+    C = new(1, bad, 100),
     ID = C#bet.id,
     {_, empty, _} = get(ID, 0),
     Root = write(C, 0),
     {_, C, _} = get(ID, Root),
     {_, empty, _} = get(ID, 0),
+    Tree2 = add_bet(ID, true, 100, Root),
+    {_, Bet2, _} = get(ID, Tree2),
+    Bet2 = increase(C, true, 100),
     success.
     
     

@@ -1,18 +1,13 @@
-We should let channels look at other closed channels to see who closed them, and what nonce they closed on.
-Then you could pay the slasher on a slow channel to watch a fast channel.
-
-When creating a channel, the channe id needs to either be empty, or hold a channel that has been closed longer than the closing period for channels.
-Channels need to know if they were closed, and for how long they have been closed, and who, if anyone, did a slash transaction.
-
 implement the oracle transaction types.
 upgrade spending so it can spend shares.
 upgrade delete_account so it can send shares.
+
+We should download headers in batches, it would be much faster.
 
 Channels should only hold AE tokens, but when a channel settles, it should be able to split the AE tokens into equal pairs of any of the types of tokens, and give one side of the pair to one account and the other side to the other account. This way we can use channels to trade all types of tokens.
 
 javascript light wallets need to be able to do all the channel stuff that full nodes do.
 
-in the white paper we should explain the centralized and trustless exchanges.
 
 
 blog post about channels that use untrusted third parties to be secure. So you don't have to stay online all the time.
@@ -57,6 +52,7 @@ maybe nodes need to advertise their own IP/port combo as a peer?
 It would be nice if there were some macros for chalang/src/compiler_lisp2.erl that did backtracking. that way we wouldn't have to think about control flow when making smart contracts.
 
 
+in the white paper we should explain the centralized and trustless exchanges.
 
 
 Updates for next time we restart at a genesis block:
