@@ -14,6 +14,7 @@ test() ->
     S = test(5),
     S = test(6),
     S = test(7),
+    S = test(8),
     S.
 absorb(Tx) -> 
     tx_pool_feeder:absorb(Tx),
@@ -302,7 +303,64 @@ test(7) ->
     ID = keys:id(),
     {Trees,_,_} = tx_pool:data(),
     Accounts = trees:accounts(Trees),
-    {Tx, _} = existence_tx:make(ID, 1000, S, Accounts),
+    C = existence:new(testnet_hasher:doit(S)),
+    {Tx, _} = existence_tx:make(ID, 1000, C, Accounts),
     Stx = keys:sign(Tx, Accounts),
     absorb(Stx),
+    {Trees2, _, _} = tx_pool:data(),
+    ETree = trees:existence(Trees2),
+    {_, C, _} = existence:get(existence:hash(C), ETree),
+    success;
+test(8) ->
+    %spend shares
+    tx_pool:dump(),
+    {Trees,_,_} = tx_pool:data(),
+    Accounts = trees:accounts(Trees),
+    {NewAddr,NewPub,NewPriv} = testnet_sign:hard_new_key(),
+    Fee = 10,
+    {Ctx, _} = create_account_tx:make(NewAddr, 1000000000, Fee, 1, 2, Accounts),
+    Stx = keys:sign(Ctx, Accounts),
+    absorb(Stx),
+    {Trees2, _, _} = tx_pool:data(),
+    Accounts2 = trees:accounts(Trees2),
+    timer:sleep(200),
+    Shares = [
+	      shares:new(100, 500, 0),
+	      shares:new(101, 500, 0),
+	      shares:new(110, 500, 0)
+	     ],
+    {Ctx2, _} = spend_tx:make(2, 10, Fee, 1, Accounts2, Shares),
+    Stx2 = keys:sign(Ctx2, Accounts2),
+    absorb(Stx2),
+    {Trees3, _, _} = tx_pool:data(),
+    Accounts3 = trees:accounts(Trees3),
+    {_, A1, _} = account:get(1, Accounts3),
+    {_, A2, _} = account:get(2, Accounts3),
+    S1 = account:shares(A1), 
+    S2 = account:shares(A2),
+    {shares:get(100, S1),
+     shares:get(100, S2),
+     shares:get(101, S1),
+     shares:get(101, S2),
+     shares:get(110, S1),
+     shares:get(110, S2)},
+    {Ctx3, _} = spend_tx:make(1, 10, Fee, 2, Accounts3, Shares),
+    Stx3 = testnet_sign:sign_tx(Ctx3, NewPub, NewPriv, 2, Accounts3), 
+    absorb(Stx3),
+    {Trees4, _, _} = tx_pool:data(),
+    Accounts4 = trees:accounts(Trees4),
+    {_, A3, _} = account:get(1, Accounts4),
+    {_, A4, _} = account:get(2, Accounts4),
+    S3 = account:shares(A3),
+    S4 = account:shares(A4),
+    {_, empty, _} = shares:get(100, S3),
+    {_, empty, _} = shares:get(101, S3),
+    {_, empty, _} = shares:get(110, S3),
+    {_, empty, _} = shares:get(100, S4),
+    {_, empty, _} = shares:get(101, S4),
+    {_, empty, _} = shares:get(110, S4),
     success.
+    
+    
+    
+    

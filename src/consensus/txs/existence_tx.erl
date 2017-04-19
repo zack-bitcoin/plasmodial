@@ -2,10 +2,10 @@
 -export([doit/3, make/4]).
 -record(ex, {from, nonce = 0, fee = 0, commit = 0}).
 
-make(From, Fee, Data, AccountRoot) ->
+make(From, Fee, C, AccountRoot) ->
     {_, Acc, Proof} = account:get(From, AccountRoot),
     Nonce = account:nonce(Acc) + 1,
-    C = existence:new(testnet_hasher:doit(Data)),
+    %C = existence:new(testnet_hasher:doit(Data)),
     Tx = #ex{from = From,fee=Fee,nonce=Nonce,commit=C},
     {Tx, [Proof]}.
 doit(Tx, Trees, NewHeight) ->

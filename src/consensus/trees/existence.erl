@@ -6,6 +6,8 @@
 hash(X) ->
     X#exist.hash.
 new(Hash) ->
+    HS = constants:hash_size(),
+    HS = size(Hash),
     #exist{hash = Hash}.
 serialize(E) ->
     HS = constants:hash_size(),

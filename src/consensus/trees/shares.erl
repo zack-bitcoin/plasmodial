@@ -17,14 +17,14 @@ new(ID, Amount, Height) ->
 serialize(X) ->
     A = X#share.amount,
     HEI = constants:height_bits(),
-    Sign = if
-	       A>0 -> 1;
-	       true -> 0
+    {Sign, A2} = if
+	       A>0 -> {1, A};
+	       true -> {0, -A}
 	   end,
     BAL = constants:balance_bits(),
     KL = constants:key_length()*8,
     <<Sign:8, 
-      A:BAL, 
+      A2:BAL, 
       (X#share.id):KL,
       (X#share.modified):HEI
     >>.
@@ -85,19 +85,20 @@ receive_share(Share, Tree, Height) ->
 		    {Tokens, write(X, Tree, Height)}
 	    end
     end.
-diff(ID) ->
-    Base = constants:shares_base(),
-    DiffFrac = {101, 100},%so every new difficulty is 1% higher
-    expt(Base, DiffFrac, ID).
-expt(Base, {T, B}, ID) ->
+diff(ID) -> ID+constants:initial_difficulty().
+%diff_old(ID) ->
+    %Base = constants:initial_difficulty(),
+    %DiffFrac = {101, 100},%so every new difficulty is 1% higher
+    %expt(Base, DiffFrac, ID).
+%expt(Base, {T, B}, ID) ->
     %calculates the exponential of fraction T/B deterministically in log2(ID) steps
-    A = ID rem 2,
-    case A of
-	0 ->
-	    C = expt(Base, {T, B}, ID div 2),
-	    C*C;
-	1 -> expt(((Base * T) div B), {T, B}, ID-1)
-    end.
+%    A = ID rem 2,
+%    case A of
+%	0 ->
+%	    C = expt(Base, {T, B}, ID div 2),
+%	    C*C;
+%	1 -> expt(((Base * T) div B), {T, B}, ID-1)
+%    end.
 	    
 get_paid(Share, Height) ->
     OldHeight = Share#share.modified,
@@ -124,7 +125,7 @@ root_hash(Root) ->
 
 test() ->
     Key = 1,
-    C = new(Key, 100, 1),
+    C = new(Key, -100, 1),
     {_, empty, _} = get(Key, 0),
     NewLoc = write(C, 0, 1),
     {_, C, _} = get(Key, NewLoc),

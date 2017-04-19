@@ -1,6 +1,7 @@
 -module(account).
 -export([new/4,nonce/1,write/2,get/2,update/5,update/7,addr/1,id/1,balance/1,root_hash/1,now_balance/3,delete/2,
 	 receive_shares/3, send_shares/3,
+	 shares/1, bets/1,
 	 test/0]).
 -record(acc, {balance = 0, %amount of money you have
 	      nonce = 0, %increments with every tx you put on the chain. 
@@ -12,6 +13,8 @@
 addr(X) -> X#acc.addr.
 id(X) -> X#acc.id.
 balance(X) -> X#acc.balance.
+shares(X) -> X#acc.shares.
+bets(X) -> X#acc.bets.
 receive_shares(Acc, Shares, Height) ->
     SharesTree = Acc#acc.shares,
     {Tokens, NewTree} = shares:receive_shares(Shares, SharesTree, Height),
