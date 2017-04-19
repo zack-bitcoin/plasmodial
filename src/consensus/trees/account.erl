@@ -1,5 +1,7 @@
 -module(account).
--export([new/4,nonce/1,write/2,get/2,update/5,addr/1,id/1,balance/1,root_hash/1,now_balance/3,delete/2,test/0]).
+-export([new/4,nonce/1,write/2,get/2,update/5,update/7,addr/1,id/1,balance/1,root_hash/1,now_balance/3,delete/2,
+	 receive_shares/3, send_shares/3,
+	 test/0]).
 -record(acc, {balance = 0, %amount of money you have
 	      nonce = 0, %increments with every tx you put on the chain. 
 	      height = 0,  %The last height at which you paid the tax
@@ -10,12 +12,23 @@
 addr(X) -> X#acc.addr.
 id(X) -> X#acc.id.
 balance(X) -> X#acc.balance.
+receive_shares(Acc, Shares, Height) ->
+    SharesTree = Acc#acc.shares,
+    {Tokens, NewTree} = shares:receive_shares(Shares, SharesTree, Height),
+    Acc#acc{shares = NewTree, balance =Acc#acc.balance + Tokens}.
+send_shares(Acc, Shares, Height) ->
+    SharesTree = Acc#acc.shares,
+    {Tokens, NewTree} = shares:send_shares(Shares, SharesTree, Height),
+    Acc#acc{shares = NewTree, balance = Acc#acc.balance + Tokens}.
 now_balance(Acc, Amount, NewHeight) ->
     OldHeight = Acc#acc.height,
     Rent = constants:account_rent()*(NewHeight - OldHeight),
     Amount + Acc#acc.balance - Rent.
     
 update(Id, Accounts, Amount, NewNonce, NewHeight) ->
+    {_, Acc, _} = get(Id, Accounts),
+    update(Id, Accounts, Amount, NewNonce, NewHeight, Acc#acc.shares, Acc#acc.bets).
+update(Id, Accounts, Amount, NewNonce, NewHeight, Shares, Bets) ->
     {_, Acc, _} = get(Id, Accounts),
     OldNonce = Acc#acc.nonce,
     FinalNonce = case NewNonce of
@@ -28,8 +41,10 @@ update(Id, Accounts, Amount, NewNonce, NewHeight) ->
     NewBalance = now_balance(Acc, Amount, NewHeight),
     true = NewBalance > 0,
     Acc#acc{balance = NewBalance,
-	 nonce = FinalNonce,
-	 height = NewHeight}.
+	    nonce = FinalNonce,
+	    height = NewHeight,
+	    shares = Shares,
+	    bets = Bets}.
 new(Id, Addr, Balance, Height) ->
     #acc{id = Id, addr = Addr, balance = Balance, nonce = 0, height = Height, bets = 0, shares = 0}.
 nonce(X) -> X#acc.nonce.
@@ -44,6 +59,9 @@ serialize(A) ->
     KL = key_length(),
     BetsRoot = oracle_bets:root_hash(A#acc.bets),
     SharesRoot = shares:root_hash(A#acc.shares),
+    HS = constants:hash_size(),
+    HS = size(BetsRoot),
+    HS = size(SharesRoot),
     ID = A#acc.id,
     true = (ID - 1) < math:pow(2, KL),
     Out = <<(A#acc.balance):BAL, 

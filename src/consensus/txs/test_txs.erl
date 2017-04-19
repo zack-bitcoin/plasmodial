@@ -35,7 +35,7 @@ test(1) ->
     {Trees2,  _, _} = tx_pool:data(),
     Accounts2 = trees:accounts(Trees2),
     timer:sleep(200),
-    {Ctx2, _} = spend_tx:make(2, 10, Fee, 1, Accounts2),
+    {Ctx2, _} = spend_tx:make(2, 10, Fee, 1, Accounts2, []),
     Stx2 = keys:sign(Ctx2, Accounts2),
     absorb(Stx2),
     {Trees3, _, _} = tx_pool:data(),

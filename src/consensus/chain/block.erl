@@ -5,7 +5,7 @@
 	 prev_hash/1,read_int/1,check1/1,pow_block/1,
 	 mine_blocks/2, hashes/1, block_to_header/1,
 	 median_last/2, trees/1, trees_hash/1,
-	 guess_number_of_cpu_cores/0
+	 guess_number_of_cpu_cores/0, difficulty/1
 	]).
 
 -record(block, {height, prev_hash, txs, trees, 
@@ -37,7 +37,9 @@ block_to_header(Block) ->
       
 hashes(BP) ->
     BP#block_plus.prev_hashes.
-   
+difficulty(C) -> 
+    B = block(C),
+    B#block.difficulty.
 %block({Block, _Pow}) ->
 %    Block;
 block(P) when element(1, P) == pow ->

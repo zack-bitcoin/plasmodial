@@ -123,6 +123,15 @@ start_time() -> 14825749780.
 time_bits() -> 32.
 % Seconds_130_years = 60*60*24*365.24
 % 32 =~ math:log(130*60*60*24*365.24)/math:log(2). 
+shares_conversion(Many) -> Many div 7583.
+    % half life of 1 year.
+    %HalfLife = 365*24*60*60 div block_time(),
+    %if blocktime is 6000, then HalfLife is 5256
+    %(Ratio^HalfLife) = 1/2,
+    %HalfLife*log(Ratio) = log(1/2)
+	%Ratio = 2^(log(1/2)/HalfLife)
+	%0.99986813137
+	%Ratio = 7582/7583
     
     
 channel_entropy() -> 16. %Channel contracts only work for a channel with the same 2 account addresses, and with the same channel_entropy that has this many bits.

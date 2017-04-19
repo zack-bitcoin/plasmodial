@@ -2,34 +2,42 @@
 %Each account has a tree of shares. 
 %The shares are stored by share id. The id of a share determines it's difficulty. You can own either a negative, positive, or zero amount of each type of share. Shares are transferable
 -export([test/0, change_amount/2, id/1, amount/1,
-	 get/2, write/2, root_hash/1, receive_shares/2]).
--record(share, {id, amount}).
+	 get/2, write/3, root_hash/1, new/3,
+	 receive_shares/3, send_shares/3]).
+-record(share, {id, amount, 
+	       modified}).%we need to keep a record of when it was modified so that users can get paid for having shares.
 -define(name, shares).
 
 change_amount(S, A) ->
     S#share{amount = S#share.amount + A}.
 id(X) -> X#share.id.
 amount(X) -> X#share.amount.
-new(ID, Amount) ->
-    #share{id = ID, amount = Amount}.
+new(ID, Amount, Height) ->
+    #share{id = ID, amount = Amount, modified = Height}.
 serialize(X) ->
     A = X#share.amount,
+    HEI = constants:height_bits(),
     Sign = if
 	       A>0 -> 1;
 	       true -> 0
 	   end,
     BAL = constants:balance_bits(),
     KL = constants:key_length()*8,
-    <<Sign:8, A:BAL, (X#share.id):KL>>.
+    <<Sign:8, 
+      A:BAL, 
+      (X#share.id):KL,
+      (X#share.modified):HEI
+    >>.
 deserialize(X) ->
     BAL = constants:balance_bits(),
     KL = constants:key_length()*8,
-    <<Sign:8, A:BAL, ID:KL>> = X,
+    HEI = constants:height_bits(),
+    <<Sign:8, A:BAL, ID:KL, M:HEI>> = X,
     B = case Sign of
 	    0 -> -A;
 	    1 -> A
 	end,
-    #share{id = ID, amount = B}.
+    #share{id = ID, amount = B, modified = M}.
 get(ID, Tree) ->
     {X, Leaf, Proof} = trie:get(ID, Tree, ?name),
     V = case Leaf of
@@ -37,21 +45,78 @@ get(ID, Tree) ->
 	    L -> deserialize(leaf:value(L))
 	end,
     {X, V, Proof}.
-write(A, Tree) -> 
+write(A, Tree, Height) -> 
     ID = A#share.id,
-    X = serialize(A),
+    B = A#share{modified = Height},
+    X = serialize(B),
     trie:put(ID, X, 0, Tree, ?name).
-receive_shares([], Tree) -> Tree;
-receive_shares([Share|S], Tree) ->
-    Tree2 = receive_share(Share, Tree),
-    receive_shares(S, Tree2).
-receive_share(Share, Tree) ->
-    {_, Old, _} = get(id(Share), Tree),
-    New = case Old of
-	      empty -> Share;
-	      X -> X#share{amount = X#share.amount + Share#share.amount}
-	  end,
-    write(New, Tree).
+delete(ID, Tree) ->
+    trie:delete(ID, Tree, ?name).
+flip_shares([]) -> [];
+flip_shares([S|T]) -> 
+    [S#share{amount = -S#share.amount}|
+     flip_shares(T)].
+send_shares(Shares, Trees, Height) ->
+    receive_shares(flip_shares(Shares), Trees, Height).
+receive_shares(S, T, H) ->
+    receive_shares(S, T, H, 0).
+receive_shares([], Tree, _, Tokens) -> {Tokens, Tree};
+receive_shares([Share|S], Tree, Height, Tokens1) ->
+    {Tokens2, Tree2} = receive_share(Share, Tree, Height),
+    receive_shares(S, Tree2, Height, Tokens1+Tokens2).
+receive_share(Share, Tree, Height) ->
+    SID = id(Share),
+    SA = Share#share.amount,
+    {_, Old, _} = get(SID, Tree),
+    if
+	(Old == empty) and (0 == SA) ->
+	    {0, Tree};
+	Old == empty ->
+	    false = 0 == SA,
+	    {0, write(Share, Tree, Height)};
+	true ->
+	    {Shares, Tokens} = get_paid(Old, Height),
+	    NewAmount = Shares + SA,
+	    if
+		NewAmount == 0 -> 
+		    {Tokens, delete(SID, Tree)};
+		true ->
+		    X = Old#share{amount = NewAmount},
+		    {Tokens, write(X, Tree, Height)}
+	    end
+    end.
+diff(ID) ->
+    Base = constants:shares_base(),
+    DiffFrac = {101, 100},%so every new difficulty is 1% higher
+    expt(Base, DiffFrac, ID).
+expt(Base, {T, B}, ID) ->
+    %calculates the exponential of fraction T/B deterministically in log2(ID) steps
+    A = ID rem 2,
+    case A of
+	0 ->
+	    C = expt(Base, {T, B}, ID div 2),
+	    C*C;
+	1 -> expt(((Base * T) div B), {T, B}, ID-1)
+    end.
+	    
+get_paid(Share, Height) ->
+    OldHeight = Share#share.modified,
+    %for every height in the range, get the difficulty.
+    SDiff = diff(Share#share.id),
+    get_paid2(OldHeight, Height, SDiff, Share#share.amount, 0).
+    %for every difficulty in the range, see if we are over or under. positive shares get paid for being over, negative get paid for being under.
+get_paid2(Start, Start, _, Shares, T) -> {Shares, T};
+get_paid2(Step, End, Diff, Shares, Tokens) when Shares > 0 -> 
+    M = constants:shares_conversion(Shares),
+    BlockDiff = block:difficulty(block:read_int(Step)),
+    T = if 
+	    BlockDiff > Diff -> M;
+	    true -> 0
+	end,
+    get_paid2(Step+1, End, Diff, Shares-M, Tokens+T).
+    
+    %constants:shares_conversion(Many). %this tells how many shares disappear on this block.
+
 	    
 root_hash(Root) ->
     trie:root_hash(?name, Root).
@@ -59,9 +124,10 @@ root_hash(Root) ->
 
 test() ->
     Key = 1,
-    C = new(Key, 100),
+    C = new(Key, 100, 1),
     {_, empty, _} = get(Key, 0),
-    NewLoc = write(C, 0),
+    NewLoc = write(C, 0, 1),
     {_, C, _} = get(Key, NewLoc),
+    root_hash(NewLoc),
     {_, empty, _} = get(Key, 0),
     success.

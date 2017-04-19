@@ -37,7 +37,8 @@ Spends AE tokens and/or shares to a different account.
 
 # account_delete
 
-This deletes an account on the blockchain and sends all of it's AE tokens and shares to a different account.
+This deletes an account on the blockchain and sends all of it's AE tokens to a different account.
+Warning, this deletes all your share. Make sure to use account_spend to move all your shares somewhere else before deleting your account.
 
 # account_recycle
 
