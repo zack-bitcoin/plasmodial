@@ -3,6 +3,7 @@
 	 question/1,starts/1,root_hash/1, 
 	 type/1, difficulty/1, orders/1,
 	 set_orders/2, done_timer/1, set_done_timer/2,
+	 set_result/2, set_type/2,
 	 test/0]).
 -define(name, oracles).
 -record(oracle, {id, 
@@ -28,6 +29,13 @@ set_orders(X, Orders) ->
     X#oracle{orders = Orders}.
 set_done_timer(X, H) ->
     X#oracle{done_timer = H}.
+set_result(X, R) ->
+    X#oracle{result = R}.
+set_type(X, T) ->
+    true = is_integer(T),
+    true = T > -1,
+    true = T < 5,
+    X#oracle{type = T}.
 new(ID, Question, Starts, Creator, Difficulty) ->
     Orders = orders:empty_book(),
     %Orders = OrdersTree,

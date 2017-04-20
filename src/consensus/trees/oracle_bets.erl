@@ -2,10 +2,21 @@
 -export([test/0, new/3, increase/3, id/1,
 	 true/1, false/1, bad/1,
 	 write/2, get/2, root_hash/1, add_bet/4,
+	 to_shares/3, delete/2,
 	 remove_bet/3]).
 %Each account has a tree of oracle bets. Oracle bets are not transferable. Once an oracle is settled, the bets in it can be converted to shares.
 -record(bet, {id, true, false, bad}).%true, false, and bad are the 3 types of shares that can be purchased from an oracle
 -define(name, oracle_bets).
+to_shares(Bet, Correct, NewHeight) ->
+    %returns {Shares, Tokens}
+    ID = Bet#bet.id,
+    {Positive, Negative} = 
+	case Correct of
+	    true->{Bet#bet.true,Bet#bet.false+Bet#bet.bad};
+	    false->{Bet#bet.false,Bet#bet.true+Bet#bet.bad};
+	    bad  ->{Bet#bet.bad,Bet#bet.true+Bet#bet.false}
+	end,
+    [shares:new(ID, Positive, NewHeight), shares:new(ID, -Negative, NewHeight)].
 id(X) ->
     X#bet.id.
 true(X) ->
@@ -57,6 +68,8 @@ get(ID, Tree) ->
 	    L -> deserialize(leaf:value(L))
 	end,
     {X, V, Proof}.
+delete(ID, Tree) ->
+    trie:delete(ID, Tree, ?name).
 add_bet(Id, Type, Amount, Tree) ->
     {_, X, _} = get(Id, Tree),
     Y = case X of

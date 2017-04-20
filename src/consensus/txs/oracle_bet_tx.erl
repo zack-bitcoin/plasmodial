@@ -15,14 +15,15 @@
 %If your order isn't big enough to be in the order book, you cannot buy shares of the type that are stored in the order book.
 make(From, Fee, OID, Type, Amount, Accounts) ->
     {_, Acc, _Proof} = account:get(From, Accounts),
-    #oracle_bet{
+    Tx = #oracle_bet{
        from = From, 
        nonce = account:nonce(Acc) + 1,
        fee = Fee,
        id = OID,
        type = Type,
        amount = Amount
-      }.
+	   },
+    {Tx, []}.
 doit(Tx, Trees, NewHeight) ->
     From = Tx#oracle_bet.from,
     Accounts = trees:accounts(Trees),
