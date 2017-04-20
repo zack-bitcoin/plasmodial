@@ -1,7 +1,7 @@
 This is a roadmap that is less precise than my todo list, and more exciting for the community to look at.
 
 * dots mark what is completed.
-  * circles what Aeternity is working on now.
+  * circles are what Aeternity is working on now.
 
 Core protocol
 
