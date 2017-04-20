@@ -43,14 +43,14 @@ doit(Tx, Trees, NewHeight) ->
     %Mode = channel:mode(OldChannel),
     Fee = Tx#cs.fee,
     Nonce = Tx#cs.nonce,
-    {Amount, NewCNonce} = spk:run(fast, Tx#cs.scriptsig, SPK, NewHeight, 1, Accounts, Channels),
+    {Amount, NewCNonce, Shares} = spk:run(fast, Tx#cs.scriptsig, SPK, NewHeight, 1, Accounts, Channels),
     false = Amount == 0,
     true = NewCNonce > channel:nonce(OldChannel),
     %delete the channel. empty the channel into the accounts.
     %NewChannels = channel:delete(CID, Channels),
     true = (-1 < (channel:bal1(OldChannel)-Amount)),%channels can only delete money that was inside the channel.
     true = (-1 < (channel:bal2(OldChannel)+Amount)),
-    NewChannel = channel:update(From, CID, Channels, NewCNonce, 0, 0, Amount, spk:delay(SPK), NewHeight, false), 
+    NewChannel = channel:update(From, CID, Channels, NewCNonce, 0, 0, Amount, spk:delay(SPK), NewHeight, false, Shares), 
     NewChannels = channel:write(NewChannel, Channels),
     ID = Tx#cs.from,
     Account = account:update(ID, Accounts, -Fee, Nonce, NewHeight),

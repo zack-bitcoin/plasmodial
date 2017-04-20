@@ -45,7 +45,7 @@ doit({close_channel, IP, Port}) ->
     {Accounts,Channels,_,_} = tx_pool:data(),
     Height = block:height(block:read(top:doit())),
     SS = channel_feeder:script_sig_them(CD),
-    {Amount, _} = spk:run(fast, SS, SPK, Height, 0, Accounts, Channels),
+    {Amount, _, _} = spk:run(fast, SS, SPK, Height, 0, Accounts, Channels),
     CID = spk:cid(SPK),
     Fee = free_constants:tx_fee(),
     {Tx, _} = channel_team_close_tx:make(CID, Accounts, Channels, Amount, Fee),
@@ -53,7 +53,7 @@ doit({close_channel, IP, Port}) ->
     talker:talk({close_channel, CID, keys:id(), SS, STx}, IP, Port),
     {ok, 0};
 doit({dice, Amount, IP, Port}) ->
-    {ok, Other} = talker:talk({id}, IP, Port),
+    %{ok, Other} = talker:talk({id}, IP, Port),
     {Commit, Secret} = secrets:new(),
     MyID = keys:id(),
     {ok, SSPK, OtherCommit} = talker:talk({dice, 1, MyID, Commit, Amount}, IP, Port),

@@ -89,7 +89,7 @@ doit({close_channel, CID, PeerId, SS, STx}) ->
     SPK = channel_feeder:me(CD),
     Height = block:height(block:read(top:doit())),
     {Accounts,Channels,_,_} = tx_pool:data(),
-    {Amount, _} = spk:run(fast, SS, SPK, Height, 0, Accounts, Channels),
+    {Amount, _, _} = spk:run(fast, SS, SPK, Height, 0, Accounts, Channels),
     {Tx, _} = channel_team_close_tx:make(CID, Accounts, Channels, Amount, Fee),
     tx_pool_feeder:absorb(keys:sign(STx, Accounts)),
     {ok, ok};

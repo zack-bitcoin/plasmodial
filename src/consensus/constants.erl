@@ -97,10 +97,10 @@ account_size() ->
 	((balance_bits() + height_bits() + account_nonce_bits() + acc_bits() + key_length()) div 8) + (2*hash_size()).
 channel_size() ->    
     ((key_length() + (acc_bits()*2) + 
-	  (balance_bits()*4) + channel_nonce_bits() + 
+	  (balance_bits()*3) + channel_nonce_bits() + 
 	  (height_bits()*2) + 
 	  channel_entropy() + channel_delay_bits()) div 8) 
-	+ 1.
+	+ 1 + hash_size().
 existence_size() -> acc_bits().%hash_length*8
 
 channel_rent() -> account_rent().

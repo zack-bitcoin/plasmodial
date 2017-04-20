@@ -3,7 +3,8 @@
 %The shares are stored by share id. The id of a share determines it's difficulty. You can own either a negative, positive, or zero amount of each type of share. Shares are transferable
 -export([test/0, change_amount/2, id/1, amount/1,
 	 get/2, write/3, root_hash/1, new/3,
-	 receive_shares/3, send_shares/3]).
+	 receive_shares/3, send_shares/3,
+	 write_many/2]).
 -record(share, {id, amount, 
 	       modified}).%we need to keep a record of when it was modified so that users can get paid for having shares.
 -define(name, shares).
@@ -45,9 +46,20 @@ get(ID, Tree) ->
 	    L -> deserialize(leaf:value(L))
 	end,
     {X, V, Proof}.
+%make_tree_hash(S) ->
+%    make_tree_hash(S, 0).
+%make_tree_hash([], Tree) -> Tree;
+%make_tree_hash([H|T], Tree) -> 
+%    write2(H, Tree).
+write_many([], Tree) -> Tree;
+write_many([S|T], Tree) -> 
+    Tree2 = write2(S, Tree),
+    write_many(T, Tree2).
 write(A, Tree, Height) -> 
-    ID = A#share.id,
     B = A#share{modified = Height},
+    write2(B, Tree).
+write2(B, Tree) ->
+    ID = B#share.id,
     X = serialize(B),
     trie:put(ID, X, 0, Tree, ?name).
 delete(ID, Tree) ->
@@ -120,6 +132,7 @@ get_paid2(Step, End, Diff, Shares, Tokens) when Shares > 0 ->
 
 	    
 root_hash(Root) ->
+    true = is_integer(Root),
     trie:root_hash(?name, Root).
 	    
 

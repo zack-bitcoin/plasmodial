@@ -118,7 +118,7 @@ test(3) ->
     Accounts4 = trees:accounts(Trees4),
     Channels2 = trees:channels(Trees4),
 
-    {Ctx4, _} = channel_team_close_tx:make(CID, Accounts4, Channels2, 0, Fee),
+    {Ctx4, _} = channel_team_close_tx:make(CID, Accounts4, Channels2, 0, [], Fee),
     Stx4 = keys:sign(Ctx4, Accounts4),
     SStx4 = testnet_sign:sign_tx(Stx4, NewPub, NewPriv, ID2, Accounts4),
     absorb(SStx4),
@@ -177,7 +177,7 @@ test(5) ->
     Trees = block:trees(BP),
     Accounts = trees:accounts(Trees),
     {NewAddr,NewPub,NewPriv} = testnet_sign:hard_new_key(),
-
+    
     Fee = 10,
     Amount = 1000000,
     ID2 = 2,
@@ -186,11 +186,11 @@ test(5) ->
     absorb(Stx),
     {Trees2, _, _} = tx_pool:data(),
     Accounts2 = trees:accounts(Trees2),
-
+    
     CID = 5,
     Entropy = 432,
     Delay = 0,
-
+    
     {Ctx2, _} = new_channel_tx:make(CID, Accounts2, 1, ID2, 100, 200, 0, Entropy, Delay, Fee),
     Stx2 = keys:sign(Ctx2, Accounts2),
     SStx2 = testnet_sign:sign_tx(Stx2, NewPub, NewPriv, ID2, Accounts2), 
@@ -199,7 +199,7 @@ test(5) ->
     Accounts3 = trees:accounts(Trees3),
     Channels = trees:channels(Trees3),
     
-    Code = compiler_chalang:doit(<<"int 1 int 50">>),%channel nonce is 1, sends 50.
+    Code = compiler_chalang:doit(<<"int 1 int 50 nil">>),%channel nonce is 1, sends 50.
     Delay = 0,
     ChannelNonce = 0,
     ScriptPubKey = keys:sign(spk:new(1, ID2, CID, [Code], 10000, 10000, Delay, ChannelNonce, Entropy, 0), Accounts3),
@@ -207,15 +207,18 @@ test(5) ->
     ScriptSig = compiler_chalang:doit(<<" int 1 ">>),
     {Ctx3, _} = channel_solo_close:make(1, Fee, SignedScriptPubKey, [ScriptSig], Accounts3, Channels), 
     Stx3 = keys:sign(Ctx3, Accounts3),
+    io:fwrite("made it to here \n"),
+    io:fwrite(packer:pack(Stx3)),
+    io:fwrite("\n"),
     absorb(Stx3),
-    timer:sleep(200),
+    timer:sleep(500),
     {Trees4, _, _Txs} = tx_pool:data(),
     Accounts4 = trees:accounts(Trees4),
     Channels2 = trees:channels(Trees4),
     io:fwrite("test_txs CID is "),
     io:fwrite(integer_to_list(CID)),
     io:fwrite("\n"),
-    {Ctx4, _} = channel_timeout_tx:make(1,Accounts4,Channels2,CID,Fee),
+    {Ctx4, _} = channel_timeout_tx:make(1,Accounts4,Channels2,CID,[],Fee),
     Stx4 = keys:sign(Ctx4, Accounts4),
     absorb(Stx4),
     {_, _, Txs} = tx_pool:data(),
@@ -253,7 +256,7 @@ test(6) ->
     Accounts3 = trees:accounts(Trees3),
     Channels = trees:channels(Trees3),
     
-    Code = compiler_chalang:doit(<<"int 1 int 50">>),%channel nonce is 1, sends 50.
+    Code = compiler_chalang:doit(<<"int 1 int 50 nil">>),%channel nonce is 1, sends 50.
     Delay = 0,
     ChannelNonce = 0,
     ScriptPubKey = keys:sign(spk:new(1, ID2, CID, [Code], 10000, 10000, Delay, ChannelNonce, Entropy, 0), Accounts3),
@@ -288,7 +291,7 @@ test(6) ->
     Accounts6 = trees:accounts(Trees6),
     Channels4 = trees:channels(Trees6),
 
-    {Ctx6, _} = channel_timeout_tx:make(1,Accounts6,Channels4,CID,Fee),
+    {Ctx6, _} = channel_timeout_tx:make(1,Accounts6,Channels4,CID,[],Fee),
     Stx6 = keys:sign(Ctx6, Accounts6),
     absorb(Stx6),
     {_, _, Txs} = tx_pool:data(),

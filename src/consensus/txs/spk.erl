@@ -54,9 +54,9 @@ get_paid(SPK, MyID, Amount) -> %if Amount is positive, that means money is going
 	    
 run(Mode, SS, SPK, Height, Slash, Accounts, Channels) ->
     State = chalang:new_state(0, Height, Slash, 0, Accounts, Channels),
-    {Amount, NewNonce, _, _} = run2(Mode, SS, SPK, State),
+    {Amount, NewNonce, Shares, _, _} = run2(Mode, SS, SPK, State),
     true = NewNonce < 1000,
-    {Amount + SPK#spk.amount, NewNonce + (1000 * SPK#spk.nonce)}.
+    {Amount + SPK#spk.amount, NewNonce + (1000 * SPK#spk.nonce), Shares}.
 run2(fast, SS, SPK, State) -> 
     chalang:run(SS, 
 		SPK#spk.bets,
@@ -74,7 +74,7 @@ run2(safe, SS, SPK, State) ->
 	  end),
     spawn(fun() ->
 		  timer:sleep(5000),%wait enough time for the chalang contracts to finish
-		  S ! {-1,-1,-1,-1}
+		  S ! {-1,-1,-1,-1, -1}
 	  end),
     receive 
 	Z -> Z

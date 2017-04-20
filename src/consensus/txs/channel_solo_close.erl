@@ -37,11 +37,12 @@ doit(Tx, Trees, NewHeight) ->
     true = channel:entropy(OldChannel) == spk:entropy(ScriptPubkey),
     %NewCNonce = spk:nonce(ScriptPubkey),
     SS = Tx#csc.scriptsig,
-    {Amount, NewCNonce} = spk:run(fast, SS, ScriptPubkey, NewHeight, 0, Accounts, Channels),
+    {Amount, NewCNonce, Shares} = spk:run(fast, SS, ScriptPubkey, NewHeight, 0, Accounts, Channels),
     false = Amount == 0,
     SR = spk:slash_reward(ScriptPubkey),
     true = NewCNonce > channel:nonce(OldChannel),
-    NewChannel = channel:update(From, CID, Channels, NewCNonce, 0, 0, Amount, spk:delay(ScriptPubkey), NewHeight, false),
+    %SharesRoot = shares:root_hash(shares:write_many(Shares, 0)),
+    NewChannel = channel:update(From, CID, Channels, NewCNonce, 0, 0, Amount, spk:delay(ScriptPubkey), NewHeight, false, Shares),
     case From of %channels can only delete money that was inside the channel.
 	%only the other person can slash, so only check that we can afford to pay it.
 	Acc1 -> true = (-1 < (channel:bal1(NewChannel)-SR-Amount));
@@ -85,7 +86,7 @@ next_ss(From, TheirSS, SPK, Acc1, Acc2, Accounts, Channels) ->
     Height = block:height(block:read(top:doit())),
     NewHeight = Height + 1,
     State = chalang:new_state(0, Height, Slash, 0, Accounts, Channels),
-    {Amount1, Nonce1} = spk:run(safe, OurSS, SPK, NewHeight, Slash, Accounts, Channels),
+    {Amount1, Nonce1, _} = spk:run(safe, OurSS, SPK, NewHeight, Slash, Accounts, Channels),
     [_|[OurSecret|_]] = free_constants:vm(hd(OurSS), State),
     Out1 = {Amount1, Nonce1, OurSS, OurSecret},
     Height = block:height(block:read(top:doit())),
@@ -106,7 +107,7 @@ next_ss(From, TheirSS, SPK, Acc1, Acc2, Accounts, Channels) ->
 	    S2size = size(S2),
 	    SSF = <<2, S1size:32, S1/binary, 2, S2size:32, S2/binary, 0, 3:32>>,
 	    
-	    {Amount2, Nonce2} = spk:run(safe, [SSF], SPK, NewHeight, Slash, Accounts, Channels),
+	    {Amount2, _, Nonce2} = spk:run(safe, [SSF], SPK, NewHeight, Slash, Accounts, Channels),
 	    %io:fwrite("channel solo close nonce "),
 	    %io:fwrite(integer_to_list(Nonce2)),
 	    %io:fwrite("\n"),

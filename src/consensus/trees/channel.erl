@@ -1,10 +1,10 @@
 -module(channel).
--export([new/8,serialize/1,deserialize/1,update/10,
+-export([new/8,serialize/1,deserialize/1,update/11,
 	 write/2,get/2,delete/2,root_hash/1,
 	 acc1/1,acc2/1,id/1,bal1/1,bal2/1,
 	 last_modified/1, entropy/1,
 	 nonce/1,delay/1, amount/1, slasher/1,
-	 slash_reward/1, closed/1,
+	 closed/1, shares/1,
 	 test/0]).
 %This is the part of the channel that is written onto the hard drive.
 
@@ -23,8 +23,8 @@
 		  delay = 0,%this is how long you have to wait since "last_modified" to do a channel_timeout_tx.
 		  %we need to store this between a solo_close_tx and a channel_timeout_tx. That way we know we waited for long enough.
 		  slasher = 0, %this is how we remember who was the last user to do a slash on a channel. If he is the last person to slash, then he gets a reward.
-		  slash_reward = 0, %this much money is taken from each participant in the channel, and it is given to whoever does the channel_slash transaction to prevent theft.
-		  closed = false %when a channel is closed, set this to 1. The channel can no longer be modified, but the VM has access to the state it was closed on. So you can use a different channel to trustlessly pay whoever slashed.
+		  closed = false, %when a channel is closed, set this to 1. The channel can no longer be modified, but the VM has access to the state it was closed on. So you can use a different channel to trustlessly pay whoever slashed.
+		  shares = 0 %This is a pointer to the root of a tree that holds all the shares.
 		  }%
        ).
 acc1(C) -> C#channel.acc1.
@@ -39,10 +39,10 @@ entropy(C) -> C#channel.entropy.
 nonce(C) -> C#channel.nonce.
 delay(C) -> C#channel.delay.
 slasher(C) -> C#channel.slasher.
-slash_reward(C) -> C#channel.slash_reward.
 closed(C) -> C#channel.closed.
+shares(C) -> C#channel.shares.
 
-update(Slasher, ID, Channels, Nonce, Inc1, Inc2, Amount, Delay, Height, Close) ->
+update(Slasher, ID, Channels, Nonce, Inc1, Inc2, Amount, Delay, Height, Close, Shares) ->
     true = (Close == true) or (Close == false),
     true = Inc1 + Inc2 >= 0,
     {_, Channel, _} = get(ID, Channels),
@@ -67,15 +67,20 @@ update(Slasher, ID, Channels, Nonce, Inc1, Inc2, Amount, Delay, Height, Close) -
     Bal2c = min(Bal2b, Bal1a+Bal2a),
     %true = Bal1 >= 0,
     %true = Bal2 >= 0,
-    Channel#channel{bal1 = Bal1c,
+    SR = shares:write_many(Shares, 0),
+    C = Channel#channel{bal1 = Bal1c,
 		    bal2 = Bal2c,
 		    amount = Amount,
 		    nonce = NewNonce,
 		    last_modified = Height,
 		    delay = Delay,
 		    slasher = Slasher,
-		    closed = Close
-		   }.
+		    closed = Close,
+		    shares = SR
+		       },
+    io:fwrite("updating channel "),
+    io:fwrite(packer:pack(C)),
+    C.
     
 new(ID, Acc1, Acc2, Bal1, Bal2, Height, Entropy, Delay) ->
     #channel{id = ID, acc1 = Acc1, acc2 = Acc2, 
@@ -101,6 +106,10 @@ serialize(C) ->
 	     true -> 1;
 	     false -> 0
 	 end,
+    HS = constants:hash_size(),
+    Shares = shares:root_hash(C#channel.shares),
+    HS = size(Shares),
+    io:fwrite(packer:pack(C)),
     << CID:KL,
        (C#channel.acc1):ACC,
        (C#channel.acc2):ACC,
@@ -112,8 +121,9 @@ serialize(C) ->
        (C#channel.last_modified):HEI,
        Entropy:ENT,
        (C#channel.delay):Delay,
-       (C#channel.slash_reward):BAL,
-       CR:8>>.
+       CR:8,
+       Shares/binary
+    >>.
 deserialize(B) ->
     ACC = constants:acc_bits(),
     BAL = constants:balance_bits(),
@@ -122,6 +132,7 @@ deserialize(B) ->
     KL = constants:key_length(),
     ENT = constants:channel_entropy(),
     Delay = constants:channel_delay_bits(),
+    HS = constants:hash_size()*8,
     << ID:KL,
        B1:ACC,
        B2:ACC,
@@ -133,8 +144,9 @@ deserialize(B) ->
        B7:HEI,
        B11:ENT,
        B12:Delay,
-       B13:BAL,
-       Closed:8>> = B,
+       Closed:8,
+       _:HS
+    >> = B,
     CR = case Closed of
 	     0 -> false;
 	     1 -> true
@@ -144,18 +156,20 @@ deserialize(B) ->
 	     nonce = B5, timeout_height = B6, 
 	     last_modified = B7,
 	     entropy = B11, delay = B12,
-	     slash_reward = B13, closed = CR}.
+	     closed = CR}.
 write(Channel, Root) ->
     ID = Channel#channel.id,
     M = serialize(Channel),
-    trie:put(ID, M, 0, Root, channels). %returns a pointer to the new root
+    Shares = Channel#channel.shares,
+    trie:put(ID, M, Shares, Root, channels). %returns a pointer to the new root
 id_size() -> constants:key_length().
 get(ID, Channels) ->
     true = (ID - 1) < math:pow(2, id_size()),
     {RH, Leaf, Proof} = trie:get(ID, Channels, channels),
     V = case Leaf of
 	    empty -> empty;
-	    L -> deserialize(leaf:value(L))
+	    L -> X = deserialize(leaf:value(L)),
+		 X#channel{shares = leaf:meta(L)}
 	end,
     {RH, V, Proof}.
 delete(ID,Channels) ->
@@ -173,13 +187,13 @@ test() ->
     Entropy = 500,
     Delay = 11,
     C = new(ID,Acc1,Acc2,Bal1,Bal2,Height,Entropy,Delay),
-    D = deserialize(serialize(C)),
+    C = deserialize(serialize(C)),
     io:fwrite("channel test"),
     io:fwrite("\n"),
-    io:fwrite(packer:pack(C)),
-    io:fwrite("\n"),
-    io:fwrite(packer:pack(D)),
-    io:fwrite("\n"),
+    %io:fwrite(packer:pack(C)),
+    %io:fwrite("\n"),
+    %io:fwrite(packer:pack(D)),
+    %io:fwrite("\n"),
     NewLoc = write(C, 0),
     {_, C, _} = get(ID, NewLoc),
     success.
