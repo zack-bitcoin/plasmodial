@@ -27,6 +27,7 @@ javascript SPV Wallet
 
 block explorer
 
+* api to communicate with nodes
   - website
   - blocks
   - transactions
@@ -35,6 +36,7 @@ block explorer
 
 Trustless Markets
 
+* example smart contracts
   - smart contract for markets with batches at single price.
   - upgrade api to support market contracts.
   - website to display markets, integrated with javascript SPV wallets.
