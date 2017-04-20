@@ -15,6 +15,7 @@ test() ->
     S = test(6),
     S = test(7),
     S = test(8),
+    S = test(9),
     S.
 absorb(Tx) -> 
     tx_pool_feeder:absorb(Tx),
@@ -362,8 +363,56 @@ test(8) ->
     {_, empty, _} = shares:get(100, S4),
     {_, empty, _} = shares:get(101, S4),
     {_, empty, _} = shares:get(110, S4),
+    success;
+test(9) ->
+   %spend shares with channel. 
+    tx_pool:dump(),
+    {Trees,_,_} = tx_pool:data(),
+    Accounts = trees:accounts(Trees),
+    {NewAddr,NewPub,NewPriv} = testnet_sign:hard_new_key(),
+    Fee = 10,
+    {Ctx, _} = create_account_tx:make(NewAddr, 1000000000, Fee, 1, 2, Accounts),
+    Stx = keys:sign(Ctx, Accounts),
+    absorb(Stx),
+    {Trees2, _, _} = tx_pool:data(),
+    Accounts2 = trees:accounts(Trees2),
+    timer:sleep(200),
+    Shares = [
+	      shares:new(100, 500, 0),
+	      shares:new(101, 500, 0),
+	      shares:new(110, 500, 0)
+	     ],
+    {Ctx2, _} = spend_tx:make(2, 10, Fee, 1, Accounts2, Shares),
+    Stx2 = keys:sign(Ctx2, Accounts2),
+    absorb(Stx2),
+    {Trees3, _, _} = tx_pool:data(),
+    %make a channel and unspend all the shares.
+    Accounts3 = trees:accounts(Trees3),
+    %Channels = trees:channels(Trees3),
+    CID = 5,
+    Entropy = 432,
+    Delay = 30,
+    {Ctx3, _} = new_channel_tx:make(CID, Accounts3, 2, 1, 100, 200, 0, Entropy, Delay, Fee),
+    Stx3 = keys:sign(Ctx3, Accounts3),
+    SStx3 = testnet_sign:sign_tx(Stx3, NewPub, NewPriv, 2, Accounts3), 
+    absorb(SStx3),
+    {Trees4, _, _} = tx_pool:data(),
+    Accounts4 = trees:accounts(Trees4),
+    Channels2 = trees:channels(Trees4),
+    {Ctx4, _} = channel_team_close_tx:make(CID, Accounts4, Channels2, 0, Shares, Fee),
+    Stx4 = keys:sign(Ctx4, Accounts4),
+    SStx4 = testnet_sign:sign_tx(Stx4, NewPub, NewPriv, 2, Accounts4),
+    absorb(SStx4),
+    {Trees5, _, _} = tx_pool:data(),
+    Accounts5 = trees:accounts(Trees5),
+    {_, A3, _} = account:get(1, Accounts5),
+    {_, A4, _} = account:get(2, Accounts5),
+    S3 = account:shares(A3),
+    S4 = account:shares(A4),
+    {_, empty, _} = shares:get(100, S3),
+    {_, empty, _} = shares:get(101, S3),
+    {_, empty, _} = shares:get(110, S3),
+    {_, empty, _} = shares:get(100, S4),
+    {_, empty, _} = shares:get(101, S4),
+    {_, empty, _} = shares:get(110, S4),
     success.
-    
-    
-    
-    
