@@ -117,6 +117,8 @@ block_time() ->
     %10.
 channel_closed_time() ->
     60*24*60*60 div block_time(). %about 2 months, in blocks
+oracle_future_limit() ->
+    60*24*60*60 div block_time(). %about 2 months, in blocks
 time_units() -> %1000 = 1 second, 100 = 0.1 seconds
    100. 
 start_time() -> 14825749780.
@@ -153,6 +155,8 @@ block_creation_maturity() ->
     100.
 block_time_after_median() ->
     100.
+oracle_initial_liquidity() ->
+    block_reward() div 2.
     
 
 test() ->

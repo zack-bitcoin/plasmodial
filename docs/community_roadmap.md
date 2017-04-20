@@ -11,6 +11,7 @@ Core protocol
 * channels
 * account key holder
 * database for channel data
+* lightning payments
 * API
   - oracles
   - governance
@@ -33,6 +34,7 @@ block explorer
   - transactions
   - accounts
   - channels
+  - oracles
 
 Trustless Markets
 
@@ -40,3 +42,10 @@ Trustless Markets
   - smart contract for markets with batches at single price.
   - upgrade api to support market contracts.
   - website to display markets, integrated with javascript SPV wallets.
+
+
+Security Audit
+* none
+  - Core
+  - SPV javascript wallet
+  - trustless markets
