@@ -12,29 +12,29 @@ Core protocol
 * account key holder
 * database for channel data
 * API
- - oracles
- - governance
- - fully encrypted api
+  - oracles
+  - governance
+  - fully encrypted api
 
 javascript SPV Wallet
 
 * library to communicate with node API
 * compatible hash function
- - merkel proofs
- - account key holder
- - database for channel data
- - gui
+  - merkel proofs
+  - account key holder
+  - database for channel data
+  - gui
 
 block explorer
 
- - website
- - blocks
- - transactions
- - accounts
- - channels
+  - website
+  - blocks
+  - transactions
+  - accounts
+  - channels
 
 Trustless Markets
 
- - smart contract for markets with batches at single price.
- - upgrade api to support market contracts.
- - website to display markets, integrated with javascript SPV wallets.
+  - smart contract for markets with batches at single price.
+  - upgrade api to support market contracts.
+  - website to display markets, integrated with javascript SPV wallets.
