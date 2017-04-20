@@ -15,6 +15,8 @@ initial_coins() -> ?InitialCoins.
 block_reward() -> round(math:pow(2, 29)) - 1.
 initial_difficulty() -> 12*256.%for testing purposes only
 %6452.
+even_diff() ->
+    initial_difficulty() + 512.%Eventually the governance mechanism will update this number so that the positive and negative version of shares split at this difficulty have equal value.
 difficulty_bits() -> 24.
 
 hash_size() -> 12.
@@ -157,6 +159,9 @@ block_time_after_median() ->
     100.
 oracle_initial_liquidity() ->
     block_reward() div 2.
+minimum_oracle_time() ->
+    %a week in blocks
+    7*24*60*60 div block_time().
     
 
 test() ->

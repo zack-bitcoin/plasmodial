@@ -1,15 +1,19 @@
 -module(oracles).
--export([new/4,write/2,get/2,id/1,result/1,
+-export([new/5,write/2,get/2,id/1,result/1,
 	 question/1,starts/1,root_hash/1, 
-	 type/1, test/0]).
+	 type/1, difficulty/1, orders/1,
+	 set_orders/2, done_timer/1, set_done_timer/2,
+	 test/0]).
 -define(name, oracles).
 -record(oracle, {id, 
 		 result, 
 		 question, 
 		 starts, 
-		 type, %0 means oracle is live. 1 means it returned true, 2 means it returned false, 3 means that it was a bad question.
+		 type, %0 means order book is empty, 1 means the order book is holding shares of true, 2 means it holds false, 3 means that it holds shares of "bad question".
 		 orders, 
-		 creator}).
+		 creator,
+		 difficulty,
+		 done_timer}).
 %we need to store a pointer to the orders tree in the meta data.
 
 id(X) -> X#oracle.id.
@@ -17,7 +21,14 @@ result(X) -> X#oracle.result.
 question(X) -> X#oracle.question.
 starts(X) -> X#oracle.starts.
 type(X) -> X#oracle.type.
-new(ID, Question, Starts, Creator) ->
+difficulty(X) -> X#oracle.difficulty.
+orders(X) -> X#oracle.orders.
+done_timer(X) -> X#oracle.done_timer.
+set_orders(X, Orders) ->
+    X#oracle{orders = Orders}.
+set_done_timer(X, H) ->
+    X#oracle{done_timer = H}.
+new(ID, Question, Starts, Creator, Difficulty) ->
     Orders = orders:empty_book(),
     %Orders = OrdersTree,
     #oracle{id = ID,
@@ -26,7 +37,9 @@ new(ID, Question, Starts, Creator) ->
 	    starts = Starts,
 	    type = 0,
 	    orders = Orders,
-	    creator = Creator
+	    creator = Creator,
+	    difficulty = Difficulty,
+	    done_timer = Starts + constants:minimum_oracle_time()
 	   }.
 root_hash(Root) ->
     trie:root_hash(?name, Root).
@@ -38,23 +51,29 @@ serialize(X) ->
     %Orders = X#oracle.orders,
     HS = size(Question),
     HS = size(Orders),
-    HEI = constants:height_bits(),
+    HB = constants:height_bits(),
+    DB = constants:difficulty_bits(),
     <<(X#oracle.id):KL,
       (X#oracle.result):8,
       (X#oracle.type):8,
-      (X#oracle.starts):HEI,
+      (X#oracle.starts):HB,
       (X#oracle.creator):KL,
+      (X#oracle.difficulty):DB,
+      (X#oracle.done_timer):HB,
       Question/binary,
       Orders/binary>>.
 deserialize(X) ->
     KL = constants:key_length(),
     HS = constants:hash_size()*8,
     HEI = constants:height_bits(),
+    DB = constants:difficulty_bits(),
     <<ID:KL,
       Result:8,
       Type:8,
       Starts:HEI,
       Creator:KL,
+      Diff:DB,
+      DT:HEI,
       Question:HS,
       _Orders:HS
     >> = X,
@@ -64,16 +83,15 @@ deserialize(X) ->
        result = Result,
        starts = Starts,
        question = <<Question:HS>>,
-       creator = Creator
+       creator = Creator,
+       difficulty = Diff,
+       done_timer = DT
       }.
 write(Oracle, Root) ->
     %meta is a pointer to the orders tree.
     V = serialize(Oracle),
     Key = Oracle#oracle.id,
     Meta = Oracle#oracle.orders,
-    io:fwrite("write meta "),
-    io:fwrite(integer_to_list(Meta)),
-    io:fwrite("\n"),
     trie:put(Key, V, Meta, Root, ?name).
 get(ID, Root) ->
     {RH, Leaf, Proof} = trie:get(ID, Root, ?name),
@@ -82,9 +100,6 @@ get(ID, Root) ->
 	    L -> 
 		X = deserialize(leaf:value(L)),
 		M = leaf:meta(L),
-		io:fwrite("get meta "),
-		io:fwrite(integer_to_list(M)),
-		io:fwrite("\n"),
 		X#oracle{orders = M}
 	end,
     {RH, V, Proof}.
@@ -92,11 +107,11 @@ get(ID, Root) ->
 
 test() ->
     Root = 0,
-    X = new(1, testnet_hasher:doit(1), 2, 1),
+    X = new(1, testnet_hasher:doit(1), 2, 1, constants:initial_difficulty()),
     X2 = deserialize(serialize(X)),
     X = X2#oracle{orders = X#oracle.orders},
     NewLoc = write(X, Root),
-    {_, X3, _} = get(X#oracle.id, NewLoc),
+    {_, X, _} = get(X#oracle.id, NewLoc),
     %io:fwrite({X, X3}),
     {_, empty, _} = get(X#oracle.id, 0),
     success.

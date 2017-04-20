@@ -97,7 +97,7 @@ receive_share(Share, Tree, Height) ->
 		    {Tokens, write(X, Tree, Height)}
 	    end
     end.
-diff(ID) -> ID+constants:initial_difficulty().
+diff(ID) -> ID.%+constants:initial_difficulty().
 %diff_old(ID) ->
     %Base = constants:initial_difficulty(),
     %DiffFrac = {101, 100},%so every new difficulty is 1% higher

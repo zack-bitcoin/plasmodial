@@ -1,36 +1,53 @@
 -module(orders).
 -export([match/2, add/2, root_hash/1, id/1, amount/1,
 	 pointer/1, new/3, get/2, empty_book/0,
-	 remove/2,
+	 remove/2, update_amount/2, set_amount/2,
+	 available_id/1, many/1, aid/1,
 	 test/0]).
 -define(name, orders).
 -record(order, {id, aid, amount, pointer}).
+many(Root) ->
+    {_, Many} = head_get(Root),
+    Many.
+aid(X) -> X#order.aid.
 id(X) -> X#order.id.
 amount(X) -> X#order.amount.
 pointer(X) -> X#order.pointer.
 update_pointer(X, P) ->
     X#order{pointer = P}.
+set_amount(X, A) ->
+    X#order{amount = A}.
 update_amount(X, A) ->
     B = X#order.amount + A,
     true = B>0,
     X#order{amount = B}.
-	    
+available_id(Root) ->
+    OB = constants:orders_bits(),
+    <<X:OB>> = crypto:strong_rand_bytes(OB div 8),
+    {_, A, _} = get(X, Root),
+    case A of
+	empty -> available_id(Root);
+	_ -> X
+    end.
 new(ID, AID, Amount) ->
     true = ID > 1,
     #order{id = ID, aid = AID, amount = Amount, pointer = 0}.
-serialize_head(X) ->
+serialize_head(Head, Many) ->
     KL = constants:key_length(),
     OL = constants:orders_bits(),
     BAL = constants:balance_bits(),
-    Y = OL+OL+KL+BAL,
-    <<X:Y>>.
+    Y = OL+OL,
+    AB = KL+BAL,
+    <<Head:Y, Many:AB>>.
 deserialize_head(X) ->
     KL = constants:key_length(),
     OL = constants:orders_bits(),
     BAL = constants:balance_bits(),
-    Y = OL+OL+KL+BAL,
-    <<Z:Y>> = X,
-    Z.
+    Y = OL+OL,
+    AB = KL+BAL,
+    <<Head:Y, Many:AB>> = X,
+    {Head, Many}.
+    
 serialize(A) ->
     KL = constants:key_length(),
     OL = constants:orders_bits(),
@@ -59,24 +76,31 @@ get(ID, Root) ->
 	end,
     {RH, V, Proof}.
 empty_book() ->
-    X = serialize_head(0),
+    X = serialize_head(0, 0),
     trie:put(1, X, 0, 0, ?name).
 head_get(Root) ->
     {_, L, _} = trie:get(1, Root, ?name),
     deserialize_head(leaf:value(L)).
-head_put(X, Root) ->
-    Y = serialize_head(X),
+head_update(Head, Root) ->
+    {_, Many} = head_get(Root),
+    head_put(Head, Many, Root).
+many_update(Many, Root) ->
+    {Head, _} = head_get(Root),
+    head_put(Head, Many, Root). 
+head_put(Head, Many, Root) ->
+    Y = serialize_head(Head, Many),
     trie:put(1, Y, 0, Root, ?name).
 add(Order, Root) ->
     X = id(Order),
     {_, empty, _} = get(X, Root),
     %make the end of the list point to the new order.
-    P = head_get(Root),
-    case P of
+    {Head, Many} = head_get(Root),
+    case Head of
 	0 ->
-	    Root2 = head_put(X, Root),
+	    Root2 = head_put(X, Many+1, Root),
 	    write(Order, Root2);
 	Y ->
+	    Root2 = head_put(id(Order), Many+1, Root),
 	    add2(Order, Root, Y)
     end.
 add2(Order, Root, P) ->
@@ -92,14 +116,15 @@ add2(Order, Root, P) ->
 	    add2(Order, Root, M)
     end.
 remove(ID, Root) ->
-    T = head_get(Root),
-    {_,Order,_} = get(T, Root),
+    {Head, Many} = head_get(Root),
+    {_,Order,_} = get(Head, Root),
     Q = Order#order.id,
     if 
 	ID == Q -> 
-	    head_put(Q#order.pointer, Root);
+	    head_put(Q#order.pointer, Many-1, Root);
 	true ->
-	    remove2(ID, Root, T)
+	    Root2 = head_put(Head, Many-1, Root),
+	    remove2(ID, Root2, Head)
     end.
 remove2(ID, Root, P) ->
     {_, L, _} = get(P, Root),
@@ -115,24 +140,42 @@ remove2(ID, Root, P) ->
 delete(ID, Root) ->
     trie:delete(ID, Root, ?name).
 match(Order, Root) ->
-    T = head_get(Root),
-    match2(Order, Root, T).
-match2(Order, Root, T) ->
-    {_, L, _} = get(T, Root),
-    OldA = L#order.amount,
-    NewA = Order#order.amount,
-    P = L#order.pointer,
-    if
-	NewA > OldA ->
-	    Root2 = head_put(P, Root),
-	    Order2 = update_amount(Order, -OldA),
-	    Root3 = delete(id(L), Root2),
-	    match2(Order2, Root3, P);
-	NewA == OldA ->
-	    head_put(P, Root);
-	NewA < OldA ->
-	    Order2 = update_amount(L, -NewA),
-	    write(Order2, Root)
+    {Head, Many} = head_get(Root),
+    {Switch, NewRoot, Matches1, Matches2} = match2(Order, Root, Head, [], []),
+    {Many2, Switch2} = case Switch of
+	       same_exact -> {Many - length(Matches2), same};
+	       switch -> {1, switch};
+	       same -> {Many - length(Matches2) + 1, same}
+	   end,
+    Root2 = many_update(Many2, NewRoot),
+
+    {Matches1, Matches2, Switch2, Root2}.
+match2(Order, Root, T, Matches1, Matches2) ->
+    {_, La, _} = get(T, Root),
+    case La of
+	empty -> 
+	    P = Order#order.pointer,
+	    Root2 = head_update(P, Root),
+	    NewRoot = write(Order, Root2),
+	    {switch, NewRoot, Matches1, Matches2};
+	L ->
+	    OldA = L#order.amount,
+	    NewA = Order#order.amount,
+	    P = L#order.pointer,
+	    if
+		NewA > OldA ->
+		    Root2 = head_update(P, Root),
+		    Order2 = update_amount(Order, -OldA),
+		    Root3 = delete(id(L), Root2),
+		    Order3 = set_amount(Order, OldA),
+		    match2(Order2, Root3, P, [Order3|Matches1], [L|Matches2]);
+		NewA == OldA ->
+		    {same_exact, head_update(P, Root), [Order|Matches1], [L|Matches2]};
+		NewA < OldA ->
+		    Order2 = update_amount(L, -NewA),
+		    L3 = set_amount(L, NewA),
+		    {same, write(Order2, Root), [Order|Matches1], [L3|Matches2]}
+	    end
     end.
 
 root_hash(Root) ->
@@ -147,10 +190,16 @@ test() ->
     Root1 = add(Order1, Root0),
     Root2 = add(Order2, Root1),
     Order3 = new(6, 5, 110),
-    Root3 = match(Order3, Root2),
+    {Matches1, Matches2, same, Root3} = match(Order3, Root2),
     {_, empty, _} = get(ID1, 0),
     {_, {order, 5, 2, 100, _}, _} = get(ID1, Root2),
     {_, {order, 3, 2, 100, _}, _} = get(ID2, Root2),
     {_, empty, _} = get(ID1, Root3),
+
+    Root4 = add(Order1, Root0),
+    {Matches3, Matches4, switch, Root5} = match(Order3, Root4),
+    {_, empty, _} = get(ID1, Root5), 
+    {_, {order, 6, 5, 10, 0}, _} = get(6, Root5),
+    {Matches1, Matches2, Matches3, Matches4},
     success.
     

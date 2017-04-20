@@ -1,3 +1,8 @@
+How do we remember how long the order book has had a sell wall in the same direction?
+Maybe every time a threshold is crossed, we restart a timer?
+
+
+
 Channels should only hold AE tokens, but when a channel settles, it should be able to split the AE tokens into equal pairs of any of the types of tokens, and give one side of the pair to one account and the other side to the other account. This way we can use channels to trade all types of tokens.
 
 channel_timeout should move shares around.
