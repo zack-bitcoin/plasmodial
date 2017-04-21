@@ -121,9 +121,6 @@ make(PrevHash, Txs, ID) ->%ID is the user who gets rewarded for mining this bloc
     Height = Parent#block.height + 1,
     MB = mine_block_ago(Height - constants:block_creation_maturity()),
     NewTrees = absorb_txs(ParentPlus, MB, Height, Txs),
-    io:fwrite("make trees "),
-    io:fwrite(packer:pack(NewTrees)),
-    io:fwrite("\n"),
     NextDifficulty = next_difficulty(ParentPlus),
     #block_plus{
        block = 

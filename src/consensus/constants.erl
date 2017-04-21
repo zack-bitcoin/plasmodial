@@ -159,6 +159,11 @@ block_time_after_median() ->
     100.
 oracle_initial_liquidity() ->
     block_reward() div 2.
+day() ->
+    24*60*60 div block_time().
+two_days() ->
+    2*day().
+    
 minimum_oracle_time() ->
     %a week in blocks
     %7*24*60*60 div block_time().

@@ -1,4 +1,5 @@
-oracle_bet_tx manyOrders isn't what we want to calculate. We want the volume of in the bottom two orders, to see if it is above a limit.
+oracle_bet_tx many
+Orders isn't what we want to calculate. We want the volume of in the bottom two orders, to see if it is above a limit.
 If there is only one order, but it is big enough, then that is big enough.
 
 limit channel:amount so that no one can own negative money.

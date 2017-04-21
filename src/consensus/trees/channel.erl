@@ -68,9 +68,6 @@ update(Slasher, ID, Channels, Nonce, Inc1, Inc2, Amount, Delay, Height, Close, S
     %true = Bal1 >= 0,
     %true = Bal2 >= 0,
     SR = shares:write_many(Shares, 0),
-    io:fwrite("channel shares write many "),
-    io:fwrite(integer_to_list(SR)),
-    io:fwrite("\n"),
     C = Channel#channel{bal1 = Bal1c,
 		    bal2 = Bal2c,
 		    amount = Amount,
@@ -81,8 +78,6 @@ update(Slasher, ID, Channels, Nonce, Inc1, Inc2, Amount, Delay, Height, Close, S
 		    closed = Close,
 		    shares = SR
 		       },
-    io:fwrite("updating channel "),
-    io:fwrite(packer:pack(C)),
     C.
     
 new(ID, Acc1, Acc2, Bal1, Bal2, Height, Entropy, Delay) ->

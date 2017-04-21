@@ -496,7 +496,7 @@ test(11) ->
     tx_pool:dump(),
     {Trees,_,_} = tx_pool:data(),
     Accounts = trees:accounts(Trees),
-    {Tx, _} = oracle_new_tx:make(1, Fee, Question, 1, OID, Trees),
+    {Tx, _} = oracle_new_tx:make(1, Fee, Question, 1, OID, constants:initial_difficulty(), 0, Trees),
     Stx = keys:sign(Tx, Accounts),
     absorb(Stx),
 
