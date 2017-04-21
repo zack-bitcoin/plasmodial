@@ -34,10 +34,18 @@ doit(Tx, Trees, NewHeight) ->
     {_, Oracle0, _} = oracles:get(Tx#oracle_bet.id, Oracles),
     Orders0 = oracles:orders(Oracle0),
     ManyOrders = orders:many(Orders0),%instead of counting how many orders, we should sum the volume in the bottom two orders and see if it is above a limit
-    Oracle = if 
-		 ManyOrders < 2 ->
+    {Head, _} = orders:head_get(Orders0),
+    Oracle = if
+		 Head == 0 ->
 		     oracles:set_done_timer(Oracle0, NewHeight + constants:minimum_oracle_time());
-		 true -> Oracle0
+		 true ->
+		     {_, Order0, _} = orders:get(Head, Orders0),
+		     Bool = orders:amount(Order0) < constants:oracle_initial_liquidity(),
+		     if 
+			 Bool and (ManyOrders < 2) ->
+			     oracles:set_done_timer(Oracle0, NewHeight + constants:minimum_oracle_time());
+			 true -> Oracle0
+		     end
 	     end,
     %if the volume of trades it too low, then reset the done_timer to another week in the future.
     0 = oracles:result(Oracle),
