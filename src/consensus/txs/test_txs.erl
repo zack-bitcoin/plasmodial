@@ -7,16 +7,17 @@ test() ->
     Pub = keys:pubkey(),
 
     S = success,
-    S = test(1),
-    S = test(2),
-    S = test(3),
-    S = test(4),
-    S = test(5),
-    S = test(6),
-    S = test(7),
-    S = test(8),
-    S = test(9),
-    S = test(10),
+    S = test(1),%create account, spend, delete
+    S = test(2),%repo tx
+    S = test(3),%channel team close, channel grow
+    S = test(4),%channel repo
+    S = test(5),%channel timeout
+    S = test(6),%channel slash
+    S = test(7),%existence
+    S = test(8),%spend shares with spend
+    S = test(9),%spend shares with team_close
+    S = test(10),%spend shares with timeout
+    S = test(11),%try out the oracle
     S.
 absorb(Tx) -> 
     tx_pool_feeder:absorb(Tx),
@@ -467,7 +468,7 @@ test(10) ->
     absorb(Stx4),
     {Trees5, _, _Txs} = tx_pool:data(),
     Accounts5 = trees:accounts(Trees5),
-    Channels3 = trees:channels(Trees5),
+    %Channels3 = trees:channels(Trees5),
     {Ctx5, _} = channel_timeout_tx:make(1,Accounts4,Channels2,CID,Shares,Fee),
     io:fwrite(packer:pack(Ctx5)),
     Stx5 = keys:sign(Ctx5, Accounts5),
@@ -485,7 +486,75 @@ test(10) ->
     {_, empty, _} = shares:get(100, S4),
     {_, empty, _} = shares:get(101, S4),
     {_, empty, _} = shares:get(110, S4),
-    success.
+    success;
 test(11) ->
     %testing the oracle
+    %launch an oracle with oracle_new
+    Question = <<>>,
+    OID = 1,
+    Fee = 10,
+    tx_pool:dump(),
+    {Trees,_,_} = tx_pool:data(),
+    Accounts = trees:accounts(Trees),
+    {Tx, _} = oracle_new_tx:make(1, Fee, Question, 1, OID, Trees),
+    Stx = keys:sign(Tx, Accounts),
+    absorb(Stx),
+
+    block:mine_blocks(1, 10000000000),
+    timer:sleep(100),
+    block:mine_blocks(1, 10000000000),
+    timer:sleep(100),
+    {Trees2, _, _} = tx_pool:data(),
+    Accounts2 = trees:accounts(Trees2),
+    %make some bets in the oracle with oracle_bet
+    {Tx2, _} = oracle_bet_tx:make(1, Fee, OID, true, constants:oracle_initial_liquidity(), Accounts2), 
+    Stx2 = keys:sign(Tx2, Accounts2),
+    absorb(Stx2),
+    timer:sleep(100),
+
+    %mine some blocks.
+    block:mine_blocks(1, 10000000000),
+    timer:sleep(100),
+    block:mine_blocks(1, 10000000000),
+    timer:sleep(100),
+    block:mine_blocks(1, 10000000000),
+    timer:sleep(100),
+    block:mine_blocks(1, 10000000000),
+    timer:sleep(100),
+    block:mine_blocks(1, 10000000000),
+    timer:sleep(100),
+    block:mine_blocks(1, 10000000000),
+    timer:sleep(100),
+    block:mine_blocks(1, 10000000000),
+    timer:sleep(100),
+    block:mine_blocks(1, 10000000000),
+    timer:sleep(100),
+    block:mine_blocks(1, 10000000000),
+    timer:sleep(100),
+    block:mine_blocks(1, 10000000000),
+    timer:sleep(100),
+    {Trees3, _, _} = tx_pool:data(),
+    Accounts3 = trees:accounts(Trees3),
+    %close the oracle with oracle_close
+    {Tx3, _} = oracle_close_tx:make(1,Fee, OID, Accounts3),
+    Stx3 = keys:sign(Tx3, Accounts3),
+    absorb(Stx3),
+
+    {Trees4, _, _} = tx_pool:data(),
+    Accounts4 = trees:accounts(Trees4),
+    %get your spare money out with oracle_unmatched
+    Oracles = trees:oracles(Trees4),
+    {_, Oracle, _} = oracles:get(OID, Oracles),
+    Orders = oracles:orders(Oracle),
+    {OrderID, _} = orders:head_get(Orders),%This only works because there is exactly 1 order in the order book.
+    {Tx4, _} = oracle_unmatched_tx:make(1, Fee, OID, OrderID, Accounts4),
+    Stx4 = keys:sign(Tx4, Accounts4),
+    absorb(Stx4),
+
+    {Trees5, _, _} = tx_pool:data(),
+    Accounts5 = trees:accounts(Trees5),
+    %get your shares out with oracle_shares
+    {Tx5, _}=oracle_shares_tx:make(1, Fee, OID, Accounts5),
+    Stx5 = keys:sign(Tx5, Accounts5),
+    absorb(Stx5),
     success.

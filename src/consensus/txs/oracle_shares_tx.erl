@@ -13,7 +13,7 @@ make(From, Fee, OID, Accounts) ->
 doit(Tx, Trees, NewHeight) ->
     OID = Tx#oracle_shares.oracle_id,
     Oracles = trees:oracles(Trees),
-    Oracle = oracles:get(OID, Oracles),
+    {_, Oracle, _} = oracles:get(OID, Oracles),
     Result = oracles:result(Oracle),
     DT = oracles:done_timer(Oracle),
     true = NewHeight - constants:minimum_oracle_time() < DT,
@@ -27,10 +27,10 @@ doit(Tx, Trees, NewHeight) ->
     B2Shares =oracle_bets:to_shares(Bet, Result, NewHeight),
     %Shares = account:shares(Acc),
     Acc2 = account:receive_shares(Acc, B2Shares, NewHeight),
-    Bets2 = bets:delete(OID, Bets),
+    Bets2 = oracle_bets:delete(OID, Bets),
     Acc3 = account:update_bets(Acc2, Bets2),
     
-    Accounts2 = accounts:write(Accounts, Acc3),
+    Accounts2 = account:write(Accounts, Acc3),
     trees:update_accounts(Trees, Accounts2).
 test() ->
     success.

@@ -45,7 +45,7 @@ keys:shared_secret(Pubkey).
 
 To load a private key into an existing node:
 ```
-keys:load(Pubkey, Privkey, "password", ID).
+keys:load(Pubkey, Privkey, "password").
 ```
 
 

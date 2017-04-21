@@ -32,6 +32,11 @@ digest2(Tx, Trees, H) ->
 	timeout -> channel_timeout_tx:doit(Tx, Trees, H);
 	cs -> channel_slash_tx:doit(Tx, Trees, H);
 	ex -> existence_tx:doit(Tx, Trees, H);
+	oracle_new -> oracle_new_tx:doit(Tx, Trees, H);
+	oracle_bet -> oracle_bet_tx:doit(Tx, Trees, H);
+	oracle_close -> oracle_close_tx:doit(Tx, Trees, H);
+	unmatched -> oracle_unmatched_tx:doit(Tx, Trees,H);
+	oracle_shares -> oracle_shares_tx:doit(Tx,Trees,H);
 	X -> X=2
     end.
  

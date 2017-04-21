@@ -12,19 +12,19 @@ doit(Tx, Trees, NewHeight) ->
     OracleID = Tx#unmatched.oracle_id,
     OrderID = Tx#unmatched.order_id,
     AID = Tx#unmatched.from,
-    Oracles = tree:oracles(Trees),
-    Oracle = oracles:get(OracleID, Oracles),
+    Oracles = trees:oracles(Trees),
+    {_, Oracle, _} = oracles:get(OracleID, Oracles),
     Orders = oracles:orders(Oracle),
-    Order = orders:get(OrderID, Orders),
+    {_, Order, _} = orders:get(OrderID, Orders),
     Amount = orders:amount(Order),
-    Orders2 = orders:remove(order:id(Order), Orders),
-    Oracle2 = oracle:set_orders(Oracle, Orders2),
+    Orders2 = orders:remove(OrderID, Orders),
+    Oracle2 = oracles:set_orders(Oracle, Orders2),
     Oracles2 = oracles:write(Oracle2, Oracles),
     Trees2 = trees:update_oracles(Trees, Oracles2),
 
     Accounts = trees:accounts(Trees),
     Facc = account:update(AID, Accounts, Amount-Tx#unmatched.fee, Tx#unmatched.nonce, NewHeight),
-    Accounts2 = accounts:write(Accounts, Facc),
+    Accounts2 = account:write(Accounts, Facc),
     trees:update_accounts(Trees2, Accounts2).
 
 test() ->

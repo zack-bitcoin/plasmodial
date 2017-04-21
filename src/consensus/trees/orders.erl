@@ -2,7 +2,7 @@
 -export([match/2, add/2, root_hash/1, id/1, amount/1,
 	 pointer/1, new/3, get/2, empty_book/0,
 	 remove/2, update_amount/2, set_amount/2,
-	 available_id/1, many/1, aid/1,
+	 available_id/1, many/1, aid/1, head_get/1,
 	 test/0]).
 -define(name, orders).
 -record(order, {id, aid, amount, pointer}).
@@ -22,12 +22,12 @@ update_amount(X, A) ->
     true = B>0,
     X#order{amount = B}.
 available_id(Root) ->
-    OB = constants:orders_bits(),
-    <<X:OB>> = crypto:strong_rand_bytes(OB div 8),
-    {_, A, _} = get(X, Root),
+    available_id(Root, 1).
+available_id(Root, N) ->
+    {_, A, _} = get(N, Root),
     case A of
-	empty -> available_id(Root);
-	_ -> X
+	empty -> N;
+	_ -> available_id(Root, N+1)
     end.
 new(ID, AID, Amount) ->
     true = ID > 1,
@@ -91,6 +91,7 @@ head_put(Head, Many, Root) ->
     Y = serialize_head(Head, Many),
     trie:put(1, Y, 0, Root, ?name).
 add(Order, Root) ->
+    1=2,
     X = id(Order),
     {_, empty, _} = get(X, Root),
     %make the end of the list point to the new order.
@@ -100,8 +101,8 @@ add(Order, Root) ->
 	    Root2 = head_put(X, Many+1, Root),
 	    write(Order, Root2);
 	Y ->
-	    Root2 = head_put(id(Order), Many+1, Root),
-	    add2(Order, Root, Y)
+	    Root2 = head_put(Head, Many+1, Root),
+	    add2(Order, Root2, Y)
     end.
 add2(Order, Root, P) ->
     {_, L, _} = get(P, Root),
@@ -121,7 +122,7 @@ remove(ID, Root) ->
     Q = Order#order.id,
     if 
 	ID == Q -> 
-	    head_put(Q#order.pointer, Many-1, Root);
+	    head_put(Order#order.pointer, Many-1, Root);
 	true ->
 	    Root2 = head_put(Head, Many-1, Root),
 	    remove2(ID, Root2, Head)
@@ -154,7 +155,7 @@ match2(Order, Root, T, Matches1, Matches2) ->
     {_, La, _} = get(T, Root),
     case La of
 	empty -> 
-	    P = Order#order.pointer,
+	    P = Order#order.id,
 	    Root2 = head_update(P, Root),
 	    NewRoot = write(Order, Root2),
 	    {switch, NewRoot, Matches1, Matches2};

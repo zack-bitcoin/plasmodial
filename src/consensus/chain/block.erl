@@ -121,6 +121,9 @@ make(PrevHash, Txs, ID) ->%ID is the user who gets rewarded for mining this bloc
     Height = Parent#block.height + 1,
     MB = mine_block_ago(Height - constants:block_creation_maturity()),
     NewTrees = absorb_txs(ParentPlus, MB, Height, Txs),
+    io:fwrite("make trees "),
+    io:fwrite(packer:pack(NewTrees)),
+    io:fwrite("\n"),
     NextDifficulty = next_difficulty(ParentPlus),
     #block_plus{
        block = 
@@ -221,8 +224,8 @@ check_pow(BP) ->
 check2(BP) ->
     %check that the time is later than the median of the last 100 blocks.
 
-    io:fwrite(packer:pack(BP)),
-    io:fwrite("check2, \n"),
+    %io:fwrite(packer:pack(BP)),
+    %io:fwrite("check2, \n"),
     %check2 assumes that the parent is in the database already.
     true = check_pow(BP),
     %PowBlock = pow_block(BP),
@@ -242,6 +245,9 @@ check2(BP) ->
     true = (Height-1) == Prev#block.height,
     TreeHash = Block#block.trees,
     Trees = absorb_txs(ParentPlus, MB, Height, Block#block.txs),
+    io:fwrite("check2 trees "),
+    io:fwrite(packer:pack(Trees)),
+    io:fwrite("\n"),
     TreeHash = trees:root_hash(Trees),
     MyAddress = keys:address(),
     case MB of

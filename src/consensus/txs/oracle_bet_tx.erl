@@ -29,25 +29,26 @@ doit(Tx, Trees, NewHeight) ->
     Accounts = trees:accounts(Trees),
     Facc = account:update(From, Accounts, -Tx#oracle_bet.fee - Tx#oracle_bet.amount, Tx#oracle_bet.nonce, NewHeight),
     Accounts2 = account:write(Accounts, Facc),
+    Trees2 = trees:update_accounts(Trees, Accounts2),
     Oracles = trees:oracles(Trees),
-    Oracle0 = oracles:get(Tx#oracle_bet.id, Oracles),
+    {_, Oracle0, _} = oracles:get(Tx#oracle_bet.id, Oracles),
     Orders0 = oracles:orders(Oracle0),
-    ManyOrders = orders:many(Orders0),
+    ManyOrders = orders:many(Orders0),%instead of counting how many orders, we should sum the volume in the bottom two orders and see if it is above a limit
     Oracle = if 
 		 ManyOrders < 2 ->
 		     oracles:set_done_timer(Oracle0, NewHeight + constants:minimum_oracle_time());
 		 true -> Oracle0
 	     end,
     %if the volume of trades it too low, then reset the done_timer to another week in the future.
-    0 = oracle:result(Oracle),
+    0 = oracles:result(Oracle),
     true = NewHeight > oracles:starts(Oracle),
     %take some money from them. 
-    Orders = oracle:orders(Oracle),
+    Orders = oracles:orders(Oracle),
     OracleType = oracles:type(Oracle),
     TxType = case Tx#oracle_bet.type of
 		 true -> 1;
 		 false -> 2;
-		 bad_question -> 3
+		 bad -> 3
 	     end,
     Amount = Tx#oracle_bet.amount,
     ID = orders:available_id(Orders),
@@ -57,23 +58,25 @@ doit(Tx, Trees, NewHeight) ->
 	    Minimum = constants:oracle_initial_liquidity() * det_pow(2, max(1, ManyOrders)), 
 	    true = Amount >= Minimum,
 	    NewOrders = orders:add(NewOrder, Orders),
-	    NewOracles = oracles:set_orders(Oracles, NewOrders),
-	    trees:update_oracles(Trees, NewOracles);
+	    NewOracle = oracles:set_orders(Oracle, NewOrders),
+	    NewOracles = oracles:write(NewOracle, Oracles),
+	    trees:update_oracles(Trees2, NewOracles);
 	true ->
 	    {Matches1, Matches2, Next, NewOrders} = 
 		orders:match(NewOrder, Orders),
-	    Oracles2 = oracle:set_orders(Oracles, NewOrders),
-	    Accounts3 = give_bets_main(From, Matches1, TxType, Accounts2, oracle:id(Oracle)),
-	    Accounts4 = give_bets(Matches2, OracleType, Accounts3, oracle:id(Oracle)),
-	    Trees2 = trees:update_accounts(Trees, Accounts4),
-	    Oracles3 = case Next of
+	    Oracle2 = oracles:set_orders(Oracle, NewOrders),
+	    Accounts3 = give_bets_main(From, Matches1, TxType, Accounts2, oracles:id(Oracle2)),
+	    Accounts4 = give_bets(Matches2, OracleType, Accounts3, oracles:id(Oracle2)),
+	    Trees3 = trees:update_accounts(Trees2, Accounts4),
+	    Oracle3 = case Next of
 			   same -> 
-			       Oracles2;
+			       Oracle2;
 			   switch ->
-			       Oracles4 = oracles:set_done_timer(Oracles2, NewHeight + constants:minimum_oracle_time()),
-			       oracles:set_type(Oracles4, Tx#oracle_bet.type)
+			       Oracle4 = oracles:set_done_timer(Oracle2, NewHeight + constants:minimum_oracle_time()),
+			       oracles:set_type(Oracle4, TxType)
 		       end,
-	    trees:update_oracles(Trees2, Oracles3)
+	    NewOracles = oracles:write(Oracle3, Oracles),
+	    trees:update_oracles(Trees3, NewOracles)
     end.
 det_pow(X, 1) -> X;
 det_pow(Base, Ex) ->
@@ -86,7 +89,7 @@ give_bets_main(Id, Orders, Type, Accounts, OID) ->
     %Id bought many orders of the same type. sum up all the amounts, and give him this many bets.
     %return the new accounts tree
     Amount = sum_order_amounts(Orders, 0),
-    {_, Acc, _} = accounts:get(Id, Accounts),
+    {_, Acc, _} = account:get(Id, Accounts),
     OldBets = account:bets(Acc),
     NewBets = oracle_bets:add_bet(OID, Type, 2*Amount, OldBets),
     Acc2 = account:update_bets(Acc, NewBets),
@@ -98,7 +101,7 @@ sum_order_amounts([H|T], N) ->
 give_bets([], _Type, Accounts, _OID) -> Accounts;
 give_bets([Order|T], Type, Accounts, OID) ->
     ID = order:aid(Order),
-    {_, Acc, _} = accounts:get(ID, Accounts),
+    {_, Acc, _} = account:get(ID, Accounts),
     OldBets = account:bets(Acc),
     NewBets = oracle_bets:add_bet(OID, Type, 2*order:amount(Order), OldBets),
     Acc2 = account:update_bets(Acc, NewBets),

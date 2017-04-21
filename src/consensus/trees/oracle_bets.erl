@@ -12,9 +12,9 @@ to_shares(Bet, Correct, NewHeight) ->
     ID = Bet#bet.id,
     {Positive, Negative} = 
 	case Correct of
-	    true->{Bet#bet.true,Bet#bet.false+Bet#bet.bad};
-	    false->{Bet#bet.false,Bet#bet.true+Bet#bet.bad};
-	    bad  ->{Bet#bet.bad,Bet#bet.true+Bet#bet.false}
+	    1->{Bet#bet.true,Bet#bet.false+Bet#bet.bad};
+	    2->{Bet#bet.false,Bet#bet.true+Bet#bet.bad};
+	    3->{Bet#bet.bad,Bet#bet.true+Bet#bet.false}
 	end,
     [shares:new(ID, Positive, NewHeight), shares:new(ID, -Negative, NewHeight)].
 id(X) ->
@@ -34,9 +34,9 @@ increase(X, Type, A) ->
 new(ID, Type, Amount) ->
     {A, B, C} = 
 	case Type of
-	    true -> {Amount, 0, 0};
-	    false -> {0, Amount, 0};
-	    bad -> {0, 0, Amount}
+	    1 -> {Amount, 0, 0};
+	    2 -> {0, Amount, 0};
+	    3 -> {0, 0, Amount}
 	end, 
     new(ID, A, B, C).
     
