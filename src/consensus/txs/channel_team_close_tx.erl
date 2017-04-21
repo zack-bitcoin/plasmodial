@@ -1,7 +1,8 @@
 %If you did not get slashed, and you waited delay since channel_timeout, then this is how you close the channel and get the money out.
 
 -module(channel_team_close_tx).
--export([doit/3, make/6, acc1/1, acc2/1, fee/1, amount/1]).
+-export([doit/3, make/6, acc1/1, acc2/1, fee/1, amount/1,
+	 sum_share_amounts/1]).
 -record(ctc, {aid1 = 0, aid2 = 0, fee = 0,
 	      nonce = 0, id = 0, amount = 0, 
 	      shares}).
@@ -36,14 +37,21 @@ doit(Tx,Trees,NewHeight) ->
     NewChannels = channel:delete(ID, Channels),
     Bal1 = channel:bal1(OldChannel),
     Bal2 = channel:bal2(OldChannel),
+    ShareAmount = sum_share_amounts(Tx#ctc.shares) div 2,
     Amount = Tx#ctc.amount,
-    Acc1 = account:update(Aid1, Accounts, Bal1 + Amount, Tx#ctc.nonce, NewHeight),
+    true = Bal1 + Bal2 >= ShareAmount * 2,
+    true = Bal1 + Amount - ShareAmount > 0,
+    true = Bal2 - Amount - ShareAmount > 0,
+    Acc1 = account:update(Aid1, Accounts, Bal1 + Amount - ShareAmount, Tx#ctc.nonce, NewHeight),
     Acc1a = account:send_shares(Acc1, Tx#ctc.shares, NewHeight),
-    Acc2 = account:update(Aid2, Accounts, Bal2 - Amount, none, NewHeight),
+    Acc2 = account:update(Aid2, Accounts, Bal2 - Amount - ShareAmount, none, NewHeight),
     Acc2a = account:receive_shares(Acc2, Tx#ctc.shares, NewHeight),
     Accounts2 = account:write(Accounts, Acc1a),
     NewAccounts = account:write(Accounts2, Acc2a),
     Trees2 = trees:update_channels(Trees, NewChannels),
     trees:update_accounts(Trees2, NewAccounts).
     
-    
+sum_share_amounts([]) -> 0;
+sum_share_amounts([H|T]) -> 
+    shares:amount(H)+
+	sum_share_amounts(T).

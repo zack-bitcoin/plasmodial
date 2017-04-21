@@ -8,9 +8,9 @@ scriptpubkey(X) -> X#csc.scriptpubkey.
 make(From, Fee, ScriptPubkey, ScriptSig, Accounts, Channels) ->
     %true = is_list(ScriptSig),
     CID = spk:cid(testnet_sign:data(ScriptPubkey)),
-    io:fwrite("in channel solo close make CID is "),
-    io:fwrite(integer_to_list(CID)),
-    io:fwrite("\n"),
+    %io:fwrite("in channel solo close make CID is "),
+    %io:fwrite(integer_to_list(CID)),
+    %io:fwrite("\n"),
     {_, Acc, Proof1} = account:get(From, Accounts),
     {_, _Channel, Proofc} = channel:get(CID, Channels),
     
