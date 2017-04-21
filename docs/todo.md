@@ -1,3 +1,5 @@
+Channels should support multiple bets simultaniously. We need a test to show that it works.
+
 It is possible to use channel_slash to store data in a channel such that the channel can't be closed with a channel_timeout.
 Maybe this is a mistake.
 
