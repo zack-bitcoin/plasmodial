@@ -18,6 +18,7 @@ test() ->
     S = test(9),%spend shares with team_close
     S = test(10),%spend shares with timeout
     S = test(11),%try out the oracle
+    S = test(12),%multiple bets in a single channel
     S.
 absorb(Tx) -> 
     tx_pool_feeder:absorb(Tx),

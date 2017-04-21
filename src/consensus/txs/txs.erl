@@ -1,6 +1,6 @@
 -module(txs).
 -behaviour(gen_server).
--export([start_link/0,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2, dump/0,txs/0,digest/3]).
+-export([start_link/0,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2, dump/0,txs/0,digest/3,fees/1]).
 init(ok) -> {ok, []}.
 start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, ok, []).
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
@@ -39,4 +39,6 @@ digest2(Tx, Trees, H) ->
 	oracle_shares -> oracle_shares_tx:doit(Tx,Trees,H);
 	X -> X=2
     end.
- 
+fees([]) -> 0;
+fees([H|T]) -> 
+    element(4, element(2, H)) + fees(T).

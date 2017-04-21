@@ -5,7 +5,8 @@
 	 prev_hash/1,read_int/1,check1/1,pow_block/1,
 	 mine_blocks/2, hashes/1, block_to_header/1,
 	 median_last/2, trees/1, trees_hash/1,
-	 guess_number_of_cpu_cores/0, difficulty/1
+	 guess_number_of_cpu_cores/0, difficulty/1,
+	 txs/1
 	]).
 
 -record(block, {height, prev_hash, txs, trees, 
@@ -15,6 +16,8 @@
 -record(block_plus, {block, pow, trees, accumulative_difficulty = 0, prev_hashes = {}}).%The accounts and channels in this structure only matter for the local node. they are pointers to the locations in memory that are the root locations of the account and channel tries on this node.
 %prev_hash is the hash of the previous block.
 %this gets wrapped in a signature and then wrapped in a pow.
+txs(X) ->
+    X#block.txs.
 trees_hash(X) ->
     X#block.trees.
 block_to_header(Block) ->
@@ -93,7 +96,7 @@ genesis() ->
     Trees = trees:new(Accounts, 0, 0, 0, 0),
     #block_plus{block = Block, trees = Trees}.
     
-absorb_txs(PrevPlus, MinesBlock, Height, Txs) ->
+absorb_txs(PrevPlus, MinesBlock, Height, Txs, BlocksAgo) ->
     Trees = PrevPlus#block_plus.trees,
     OldAccounts = trees:accounts(Trees),
     NewAccounts = 
@@ -103,10 +106,12 @@ absorb_txs(PrevPlus, MinesBlock, Height, Txs) ->
 	    {ID, Address} -> %for miners who don't yet have an account.
 		{_, empty, _} = account:get(ID, OldAccounts),
 		%We should also give the miner the sum of the transaction fees.
-		NM = account:new(ID, Address, constants:block_reward(), Height),
+		TransactionFees = txs:fees(block:txs(block:block(block:read_int(BlocksAgo)))),
+		NM = account:new(ID, Address, constants:block_reward() + TransactionFees, Height),
 		account:write(OldAccounts, NM);
 	    MB -> %If you already have an account.
-		NM = account:update(MB, OldAccounts, constants:block_reward(), none, Height),
+		TransactionFees = txs:fees(block:txs(block:block(block:read_int(BlocksAgo)))),
+		NM = account:update(MB, OldAccounts, constants:block_reward() + TransactionFees, none, Height),
 		account:write(OldAccounts, NM)
 	end,
     NewTrees = trees:update_accounts(Trees, NewAccounts),
@@ -119,8 +124,9 @@ make(PrevHash, Txs, ID) ->%ID is the user who gets rewarded for mining this bloc
     Parent = block(ParentPlus),
     %Parent = pow:data(ParentPlus#block_plus.block),
     Height = Parent#block.height + 1,
-    MB = mine_block_ago(Height - constants:block_creation_maturity()),
-    NewTrees = absorb_txs(ParentPlus, MB, Height, Txs),
+    BlocksAgo =Height - constants:block_creation_maturity(),
+    MB = mine_block_ago(BlocksAgo),
+    NewTrees = absorb_txs(ParentPlus, MB, Height, Txs, BlocksAgo),
     NextDifficulty = next_difficulty(ParentPlus),
     #block_plus{
        block = 
@@ -238,10 +244,11 @@ check2(BP) ->
     ML = median_last(PH, constants:block_time_after_median()),
     true = Block#block.time > ML,
     Height = Block#block.height,
-    MB = mine_block_ago(Height - constants:block_creation_maturity()),
+    BlocksAgo =Height-constants:block_creation_maturity(),
+    MB = mine_block_ago(BlocksAgo),
     true = (Height-1) == Prev#block.height,
     TreeHash = Block#block.trees,
-    Trees = absorb_txs(ParentPlus, MB, Height, Block#block.txs),
+    Trees = absorb_txs(ParentPlus, MB, Height, Block#block.txs, BlocksAgo),
     io:fwrite("check2 trees "),
     io:fwrite(packer:pack(Trees)),
     io:fwrite("\n"),

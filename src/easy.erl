@@ -25,7 +25,9 @@ sync2(Height, N) ->
    end. 
    
 tx_maker(F) -> 
-    {Accounts, Channels,_,_} = tx_pool:data(),
+    {Trees,_,_} = tx_pool:data(),
+    Accounts = trees:accounts(Trees),
+    Channels = trees:channels(Trees),
     {Tx, _} = F(Accounts, Channels),
     case keys:sign(Tx, Accounts) of
 	{error, locked} -> ok;
