@@ -9,11 +9,6 @@ javascript light wallets need to be able to do all the channel stuff that full n
 blog post about channels that use untrusted third parties to be secure. So you don't have to stay online all the time.
 
 
-in channel_solo_close we update the channel:amount written on-chain. this is a problem, because when we slash, we want to undo the channel_solo_close.
-We need to look at the tests, maybe we are testing the wrong thing, or we aren't testing the right thing.
-
-the big case statement at line 48 of channel_solo_close seems bad. shouldn't we make sure that both balances are positive, not just one?
-
 It is currently possible for an attacker to trick us into ignoring a good block. They trick us into storing a good blocks hash into block_hashes. They give us a good block's header, but mix in some bad transactions, or censor a transaction, or they don't give us some of the merkel tree we need to verify the transactions.
 To fix this, each header should contain a hash of all the transactions. We should include the signatures in this hash. This gives us a guarantee that all the data is available at block:check1.
 

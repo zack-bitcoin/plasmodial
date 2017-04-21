@@ -43,12 +43,10 @@ doit(Tx, Trees, NewHeight) ->
     true = NewCNonce > channel:nonce(OldChannel),
     %SharesRoot = shares:root_hash(shares:write_many(Shares, 0)),
     NewChannel = channel:update(From, CID, Channels, NewCNonce, 0, 0, Amount, spk:delay(ScriptPubkey), NewHeight, false, Shares),
-    case From of %channels can only delete money that was inside the channel.
-	%only the other person can slash, so only check that we can afford to pay it.
-	Acc1 -> true = (-1 < (channel:bal1(NewChannel)-SR-Amount));
-	Acc2 -> true = (-1 < (channel:bal2(NewChannel)-SR+Amount));
-	_ -> Acc1 = Acc2
-    end,
+
+    true = (-1 < (channel:bal1(NewChannel)-SR-Amount)),
+    true = (-1 < (channel:bal2(NewChannel)-SR+Amount)),
+
     NewChannels = channel:write(NewChannel, Channels),
     Facc = account:update(From, Accounts, -Tx#csc.fee, Tx#csc.nonce, NewHeight),
     NewAccounts = account:write(Accounts, Facc),
