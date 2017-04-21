@@ -14,6 +14,8 @@ make(From, Fee, Question, Start, ID, Trees) ->
     Tx = #oracle_new{from = From, nonce = account:nonce(Acc) + 1, fee = Fee, question = Question, start = Start, id = ID},
     {Tx, []}.
 doit(Tx, Trees, NewHeight) ->
+    %If the question is <<"">>, let it run.
+    %If the question is not <<"">>, then they need to show that a different oracle with the question "" recently returned "bad", and the difficulty of this oracle is 1/2 as high as that oracle.
     Accounts = trees:accounts(Trees),
     From = Tx#oracle_new.from,
     Facc = account:update(From, Accounts, -Tx#oracle_new.fee-constants:oracle_initial_liquidity(), Tx#oracle_new.nonce, NewHeight),

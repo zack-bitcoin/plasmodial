@@ -4,15 +4,40 @@
 -export([test/0, change_amount/2, id/1, amount/1,
 	 get/2, write/3, root_hash/1, new/3,
 	 receive_shares/3, send_shares/3,
-	 write_many/2]).
+	 write_many/3, write_many/2,
+	 to_code/1, from_code/1]).
 -record(share, {id, amount, 
 	       modified}).%we need to keep a record of when it was modified so that users can get paid for having shares.
 -define(name, shares).
 
+to_code(Shares) ->
+    S = "macro [ nil ;\n"
+	++ "macro , swap cons ;\n"
+	++ "macro ] swap cons reverse ;\n"
+	++ "[ " ++ to_code2(Shares),
+    list_to_binary(S).
+to_code2([]) -> " ]\n";
+to_code2([H]) -> to_code3(H) ++ " ]\n ";
+to_code2([H|T]) -> to_code3(H) ++ " , " ++ to_code2(T).
+to_code3(Share)-> 
+    "[int " ++ integer_to_list(Share#share.id) ++", " ++
+    "int " ++ integer_to_list(Share#share.amount) ++", " ++
+    "int " ++ integer_to_list(Share#share.modified) ++"]".
+from_code([]) -> [];
+from_code([[ID, Amount, M]|T]) -> 
+    <<I:32>> = ID,
+    <<A:32>> = Amount,
+    <<N:32>> = M,
+    [#share{id = I, amount = A, modified = N}|
+     from_code(T)].
+    
 change_amount(S, A) ->
     S#share{amount = S#share.amount + A}.
 id(X) -> X#share.id.
 amount(X) -> X#share.amount.
+modified(X) -> X#share.modified.
+set_modified(X, M) ->
+    X#share{modified = M}.
 new(ID, Amount, Height) ->
     #share{id = ID, amount = Amount, modified = Height}.
 serialize(X) ->
@@ -24,6 +49,9 @@ serialize(X) ->
 	   end,
     BAL = constants:balance_bits(),
     KL = constants:key_length()*8,
+    io:fwrite("serialize share "),
+    io:fwrite(packer:pack(X)),
+    io:fwrite("\n"),
     <<Sign:8, 
       A2:BAL, 
       (X#share.id):KL,
@@ -55,6 +83,12 @@ write_many([], Tree) -> Tree;
 write_many([S|T], Tree) -> 
     Tree2 = write2(S, Tree),
     write_many(T, Tree2).
+write_many([], Tree, _) -> Tree;
+write_many([S|T], Tree, Old) -> 
+    {_, SO, _} = get(id(S), Old),
+    S2 = set_modified(S, modified(SO)),
+    Tree2 = write2(S2, Tree),
+    write_many(T, Tree2, Old).
 write(A, Tree, Height) -> 
     B = A#share{modified = Height},
     write2(B, Tree).

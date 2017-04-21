@@ -26,8 +26,10 @@ doit(Tx, Trees, NewHeight) ->
     From = Tx#timeout.aid,
     CID = Tx#timeout.cid,
     {_, Channel, _} = channel:get(CID, Channels),
-    true = shares:root_hash(channel:shares(Channel)) 
-	== shares:root_hash(shares:write_many(Tx#timeout.shares, 0)),
+    CS = channel:shares(Channel),
+    true = shares:root_hash(CS) 
+	== shares:root_hash(shares:write_many(Tx#timeout.shares, 0, CS)),
+    %make sure that the sum of shares in Tx#timeout.shares and the amount spent by the channel sum up to less than how much money was in the channel.
     false = channel:closed(Channel),
     CA = channel:amount(Channel),
     %false = CA == 0,

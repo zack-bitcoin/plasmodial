@@ -54,8 +54,9 @@ get_paid(SPK, MyID, Amount) -> %if Amount is positive, that means money is going
 	    
 run(Mode, SS, SPK, Height, Slash, Accounts, Channels) ->
     State = chalang:new_state(0, Height, Slash, 0, Accounts, Channels),
-    {Amount, NewNonce, Shares, _, _} = run2(Mode, SS, SPK, State),
+    {Amount, NewNonce, CodeShares, _, _} = run2(Mode, SS, SPK, State),
     true = NewNonce < 1000,
+    Shares = shares:from_code(CodeShares),
     {Amount + SPK#spk.amount, NewNonce + (1000 * SPK#spk.nonce), Shares}.
 run2(fast, SS, SPK, State) -> 
     chalang:run(SS, 
