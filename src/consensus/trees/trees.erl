@@ -1,20 +1,24 @@
 -module(trees).
 -export([accounts/1,channels/1,existence/1,burn/1,
-	 oracles/1,new/5,update_accounts/2,
+	 oracles/1,new/6,update_accounts/2,
 	 update_channels/2,update_existence/2,
 	 update_burn/2,update_oracles/2,
+	 update_governance/2, governance/1,
 	 root_hash/1]).
 -record(trees, {accounts, channels, existence,
-		burn, oracles}).
+		burn, oracles, governance}).
 accounts(X) -> X#trees.accounts.
 channels(X) -> X#trees.channels.
 existence(X) -> X#trees.existence.
 burn(X) -> X#trees.burn.
 oracles(X) -> X#trees.oracles.
-new(A, C, E, B, O) ->
+governance(X) -> X#trees.governance.
+new(A, C, E, B, O, G) ->
     #trees{accounts = A, channels = C,
 	   existence = E, burn = B, 
-	   oracles = O}.
+	   oracles = O, governance = G}.
+update_governance(X, A) ->
+    X#trees{governance = A}.
 update_accounts(X, A) ->
     X#trees{accounts = A}.
 update_channels(X, A) ->

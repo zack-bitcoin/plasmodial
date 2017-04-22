@@ -38,11 +38,12 @@ init([]) ->
 	     tree_child(accounts, KL, constants:account_size(), KL*2),
 	     tree_child(channels, KL, constants:channel_size(), KL),
 	     tree_child(existence, FullLength, HS),
-	     tree_child(oracles, KL, ((((KL*2)+(HB*2)+DB) div 8) + 2 + (2*HS)), (KL div 8)),
+	     tree_child(oracles, KL, ((((KL*2)+(HB*2)+DB) div 8) + 4 + (2*HS)), (KL div 8)),
 	     tree_child(orders, KL, ((KL + (constants:orders_bits()*2) + BB) div 8)),
 	     tree_child(burn, FullLength, (BB div 8) + HS),
 	     tree_child(oracle_bets, KL, (KL + (3 * BB div 8))),
-	     tree_child(shares, KL, (KL + 1 + ((BB + HB) div 8)))
+	     tree_child(shares, KL, (KL + 1 + ((BB + HB) div 8))),
+	     tree_child(governance, 8, 4)
 	    ],
     {ok, { {one_for_one, 50000, 1}, Tries ++ Children} }.
 

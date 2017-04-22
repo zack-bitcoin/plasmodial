@@ -165,7 +165,7 @@ minimum_oracle_time() ->
     7.%for testing purposes
 
 maximum_question_size() ->
-    100.
+    1000.
     
     
 

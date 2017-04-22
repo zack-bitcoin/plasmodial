@@ -23,6 +23,22 @@ doit(Tx, Trees, NewHeight) ->
     Oracle3 = oracles:set_done_timer(Oracle2, NewHeight),
     Oracles2 = oracles:write(Oracle3, Oracles),
     Trees2 = trees:update_oracles(Trees, Oracles2),
+    Gov = oracle:governance(Oracle),
+    Trees3 = 
+	case Gov of
+	    0 -> Trees2;
+	    G ->
+		GA = oracle:governance_amount(Oracle),
+		case Result of
+		    1 -> 
+			Gov2=governance:change(G, GA, Gov),
+			trees:update_governance(Gov2, Trees2);
+		    2 ->
+			Gov2=governance:change(G, -GA,Gov),
+			trees:update_governance(Gov2, Trees2);
+		    3 -> Trees2
+		end
+	end,
     trees:update_accounts(Trees2, NewAccounts).
 test() ->
     success.

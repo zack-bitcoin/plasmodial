@@ -1,9 +1,10 @@
 -module(oracles).
--export([new/5,write/2,get/2,id/1,result/1,
+-export([new/7,write/2,get/2,id/1,result/1,
 	 question/1,starts/1,root_hash/1, 
 	 type/1, difficulty/1, orders/1,
 	 set_orders/2, done_timer/1, set_done_timer/2,
-	 set_result/2, set_type/2,
+	 set_result/2, set_type/2, governance/1,
+	 governance_amount/1,
 	 test/0]).
 -define(name, oracles).
 -record(oracle, {id, 
@@ -14,9 +15,13 @@
 		 orders, 
 		 creator,
 		 difficulty,
-		 done_timer}).
+		 done_timer,
+		 governance = 0,%if it is non-zero, then this is a governance oracle which can update the value of the variables that define the protocol.
+		 governance_amount = 0}).
 %we need to store a pointer to the orders tree in the meta data.
 
+governance(X) -> X#oracle.governance.
+governance_amount(X) -> X#oracle.governance_amount.
 id(X) -> X#oracle.id.
 result(X) -> X#oracle.result.
 question(X) -> X#oracle.question.
@@ -36,7 +41,8 @@ set_type(X, T) ->
     true = T > -1,
     true = T < 5,
     X#oracle{type = T}.
-new(ID, Question, Starts, Creator, Difficulty) ->
+new(ID, Question, Starts, Creator, Difficulty, Governance, GovAmount) ->
+    true = (Governance > -1) and (Governance < governance:max()),
     Orders = orders:empty_book(),
     %Orders = OrdersTree,
     #oracle{id = ID,
@@ -47,7 +53,9 @@ new(ID, Question, Starts, Creator, Difficulty) ->
 	    orders = Orders,
 	    creator = Creator,
 	    difficulty = Difficulty,
-	    done_timer = Starts + constants:minimum_oracle_time()
+	    done_timer = Starts + constants:minimum_oracle_time(),
+	    governance = Governance,
+	    governance_amount = GovAmount
 	   }.
 root_hash(Root) ->
     trie:root_hash(?name, Root).
@@ -68,6 +76,8 @@ serialize(X) ->
       (X#oracle.creator):KL,
       (X#oracle.difficulty):DB,
       (X#oracle.done_timer):HB,
+      (X#oracle.governance):8,
+      (X#oracle.governance_amount):8,
       Question/binary,
       Orders/binary>>.
 deserialize(X) ->
@@ -82,6 +92,8 @@ deserialize(X) ->
       Creator:KL,
       Diff:DB,
       DT:HEI,
+      Gov:8,
+      GovAmount:8,
       Question:HS,
       _Orders:HS
     >> = X,
@@ -93,7 +105,9 @@ deserialize(X) ->
        question = <<Question:HS>>,
        creator = Creator,
        difficulty = Diff,
-       done_timer = DT
+       done_timer = DT,
+       governance = Gov,
+       governance_amount = GovAmount
       }.
 write(Oracle, Root) ->
     %meta is a pointer to the orders tree.
@@ -115,7 +129,7 @@ get(ID, Root) ->
 
 test() ->
     Root = 0,
-    X = new(1, testnet_hasher:doit(1), 2, 1, constants:initial_difficulty()),
+    X = new(1, testnet_hasher:doit(1), 2, 1, constants:initial_difficulty(), 0, 0),
     X2 = deserialize(serialize(X)),
     X = X2#oracle{orders = X#oracle.orders},
     NewLoc = write(X, Root),

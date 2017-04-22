@@ -1,3 +1,8 @@
+Maybe we should stop users from updating the same governance variables twice at once? Alternatively the community could just label the second governance oracle as a bad question.
+
+the oracle needs to be able to update the variables that define the protocol
+
+
 It is possible to use channel_slash to store data in a channel such that the channel can't be closed with a channel_timeout.
 Maybe this is a mistake.
 

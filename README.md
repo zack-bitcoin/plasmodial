@@ -1,6 +1,8 @@
 Plasmodial
 ==========
 
+A blockchain for trustless markets and financial derivatives.
+
 This code will be used by [æternity](https://aeternity.com).
 
 ### Compiling and Runing
@@ -8,22 +10,11 @@ You will need Erlang and a couple of libraries. Please follow instructions:
 [For Ubuntu](docs/compile_ubuntu.md)
 [For Mac](docs/compile_mac.md)
 
-Then, start your node with following script:
-```
-sh start.sh
-```
-
-To download updates do this:
-```
-sh update.sh
-```
 
 ### Commands
 
-#### Sync with the network
-To sync with the network and download the blockchain: 
-
-Then, start your node with following script:
+#### Start the blockchain
+Start your node with following script:
 ```
 sh start.sh
 ```

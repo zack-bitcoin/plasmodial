@@ -501,39 +501,16 @@ test(11) ->
     Stx = keys:sign(Tx, Accounts),
     absorb(Stx),
 
-    block:mine_blocks(1, 10000000000),
-    timer:sleep(100),
-    block:mine_blocks(1, 10000000000),
-    timer:sleep(100),
+    mine_blocks(2),
     {Trees2, _, _} = tx_pool:data(),
     Accounts2 = trees:accounts(Trees2),
     %make some bets in the oracle with oracle_bet
     {Tx2, _} = oracle_bet_tx:make(1, Fee, OID, true, constants:oracle_initial_liquidity(), Accounts2), 
     Stx2 = keys:sign(Tx2, Accounts2),
     absorb(Stx2),
-    timer:sleep(100),
+    %timer:sleep(100),
 
-    %mine some blocks.
-    block:mine_blocks(1, 10000000000),
-    timer:sleep(100),
-    block:mine_blocks(1, 10000000000),
-    timer:sleep(100),
-    block:mine_blocks(1, 10000000000),
-    timer:sleep(100),
-    block:mine_blocks(1, 10000000000),
-    timer:sleep(100),
-    block:mine_blocks(1, 10000000000),
-    timer:sleep(100),
-    block:mine_blocks(1, 10000000000),
-    timer:sleep(100),
-    block:mine_blocks(1, 10000000000),
-    timer:sleep(100),
-    block:mine_blocks(1, 10000000000),
-    timer:sleep(100),
-    block:mine_blocks(1, 10000000000),
-    timer:sleep(100),
-    block:mine_blocks(1, 10000000000),
-    timer:sleep(100),
+    mine_blocks(10),
     {Trees3, _, _} = tx_pool:data(),
     Accounts3 = trees:accounts(Trees3),
     %close the oracle with oracle_close
@@ -618,3 +595,10 @@ test(12) ->
     %Block = block:mine(block:make(PH, Txs, 1), 100000000),%1 is the master pub
     %block:check2(Block),
     success.
+
+mine_blocks(Many) when Many < 1 -> ok;
+mine_blocks(Many) ->
+    %only works if you set the difficulty very low.
+    block:mine_blocks(1, 10000000000),
+    timer:sleep(100),
+    mine_blocks(Many-1).
