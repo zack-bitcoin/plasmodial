@@ -251,9 +251,6 @@ check2(BP) ->
     true = (Height-1) == Prev#block.height,
     TreeHash = Block#block.trees,
     Trees = absorb_txs(ParentPlus, MB, Height, Block#block.txs, BlocksAgo),
-    io:fwrite("check2 trees "),
-    io:fwrite(packer:pack(Trees)),
-    io:fwrite("\n"),
     TreeHash = trees:root_hash(Trees),
     MyAddress = keys:address(),
     case MB of

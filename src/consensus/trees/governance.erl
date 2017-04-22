@@ -1,12 +1,14 @@
 -module(governance).
 -export([det_power/3,tree_number_to_value/1, max/0,
 	 is_locked/2, change/3, genesis_state/0,
-	 get/2, write/2, test/0]).
+	 get/2, write/2, lock/1,
+	 test/0]).
 
 -record(gov, {id, value, lock}).
 -define(name, governance).
 
 %try to fit everything into 32-bit values.
+lock(X) -> X#gov{lock = 1}.
 new(ID, Value, Lock) ->
     #gov{id = ID, value = Value, lock = Lock}.
 genesis_state() ->
@@ -41,9 +43,13 @@ change(Name, Amount, Tree) ->
     {_, V, _} = get(Name, Tree),
     V2 = V#gov{value = V#gov.value + Amount},
     write(V2, Tree).
-is_locked(_ID, _Tree) ->
-    %read from the tree, see if it is locked.
-    false.
+is_locked(Name, Tree) ->
+    {_, V, _} = get(Name, Tree),
+    X = V#gov.lock,
+    case X of
+	0 -> false;
+	1 -> true
+    end.
 tree_number_to_value(T) when T<101 -> T;
 tree_number_to_value(T) ->
     tree_number_to_value_exponential(T-100).

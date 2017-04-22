@@ -52,7 +52,7 @@ doit(Tx, Trees0, NewHeight) ->
     true = is_binary(Question),
     QH = testnet_hasher:doit(Question),
     Diff = Tx#oracle_new.difficulty,
-    ON = oracles:new(ID, QH, Starts, From, Diff),
+    ON = oracles:new(ID, QH, Starts, From, Diff, 0, 0),
     {_, empty, _} = oracles:get(ID, Oracles),
     NewOracles = oracles:write(ON, Oracles),
     Trees2 = trees:update_oracles(Trees, NewOracles),
