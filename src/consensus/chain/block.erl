@@ -213,6 +213,8 @@ check1(BP) ->
 	    Header = pow:data(PowBlock),
 	    true = pow:above_min(PowBlock, Difficulty, constants:hash_size()),
 	    true = Block#block.time < time_now(),
+	    B = size(term_to_binary(Block#block.txs)),
+	    true = B < constants:max_block_size(),
 	    {BH, Block#block.prev_hash}
     end.
 

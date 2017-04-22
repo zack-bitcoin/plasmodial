@@ -91,7 +91,6 @@ head_put(Head, Many, Root) ->
     Y = serialize_head(Head, Many),
     trie:put(1, Y, 0, Root, ?name).
 add(Order, Root) ->
-    1=2,
     X = id(Order),
     {_, empty, _} = get(X, Root),
     %make the end of the list point to the new order.

@@ -84,7 +84,7 @@ root_hash(A) ->
     trie:root_hash(?name, A).
 
 test() ->
-    C = new(1, bad, 100),
+    C = new(1, 3, 100),
     ID = C#bet.id,
     {_, empty, _} = get(ID, 0),
     Root = write(C, 0),

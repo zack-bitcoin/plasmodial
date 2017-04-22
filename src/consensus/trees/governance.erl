@@ -21,4 +21,8 @@ name2number(comment_limit) -> 16;
 name2number(block_creation_maturity) -> 17;
 name2number(oracle_initial_liquidity) -> 18;
 name2number(minimum_oracle_time) -> 19;
-name2number(maximum_question_sizze) -> 20.
+name2number(maximum_question_size) -> 20;
+name2number(block_time_after_median) -> 21;
+name2number(channel_close_time) -> 22;
+name2number(retarget_frequency) -> 23;
+name2number(_) -> bad.

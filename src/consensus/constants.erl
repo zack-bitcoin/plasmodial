@@ -15,23 +15,18 @@ initial_coins() -> ?InitialCoins.
 block_reward() -> round(math:pow(2, 29)) - 1.
 initial_difficulty() -> 12*256.%for testing purposes only
 %6452.
-even_diff() ->
-    initial_difficulty() + 512.%Eventually the governance mechanism will update this number so that the positive and negative version of shares split at this difficulty have equal value.
 difficulty_bits() -> 24.
 
 hash_size() -> 12.
 
 finality() -> 26.%/docs/security.py explains why.
 address_entropy() -> 96.
-%master_pub() -> <<"QkF4eUUvV2htL1NyMG5PTmJjN2pjaXlBZjhvNHZSZXhOc0ovaVZweVRpMmxTd0lMb0ZJTm1JUjNVdDNpMGRTaEIrd1FzNnA1QStRbmdZeStmTGY4ZzRvPQ==">>.
 master_pub() -> <<"BMs9FJOY3/h4Ip+lah0Rc4lZDEBbV3wHDZXtqUsWS1kz88bnBr18Q52HnuzdS7IzRuQCU1HVp/AWOnQM6LVcWWw=">>.
 master_address() ->
     testnet_sign:pubkey2address(master_pub()).
 max_size() -> 2000000000.%should be 2 gigabytes, does not include old blocks.
 gas_limit() -> 1000000.
 %200,000,000 is enough to find the first 10001 prime numbers.
-backup() -> fractions:new(19, 20).
-%-define(MBS, max_size() div max_reveal() div 10).%use about 10% of size for blocks.
 max_block_size() -> 200000.%in bytes
 %this is only a limit to the size of the transactions.
 %the other block parts are also limited. Height must be an integer one greater than the previous.
@@ -48,38 +43,37 @@ max_block_size() -> 200000.%in bytes
 
 -define(ConsensusBytePrice, initial_coins() div max_size()).%instead we should have a maximum number of bytes per block, and garbage collect old blocks.
 consensus_byte_price() -> ?ConsensusBytePrice.
--define(MaxAddress, max_size() div 5 div 85).%use about 20% of space to store addresses. Each one is 85 bytes
-max_address() -> ?MaxAddress.
--define(MaxChannel, max_size() * 3 div 10 div 30).%use about 30% of space to store channels. Each one is 30 bytes
-max_channel() -> ?MaxChannel.
--define(MinChannel, constants:initial_coins() div constants:max_channel()).%use about 30% of space to store channels. Each one is 30 bytes
+%-define(MaxAddress, max_size() div 5 div 85).%use about 20% of space to store addresses. Each one is 85 bytes
+%max_channel() -> ?MaxChannel.
+%-define(MinChannel, constants:initial_coins() div constants:max_channel()).%use about 30% of space to store channels. Each one is 30 bytes
 %this constant is also used to determine the minimum amount of money we can put into a channel at a time.
 create_channel_fee() -> 0.%consensus_byte_price() * 30.
 delete_channel_reward() -> 0.
 %decided to charge for accounts based on how long it is open, instead of flat fee.
 create_account_fee() -> 0.%consensus_byte_price() * 85.
 delete_account_reward() -> 0.%create_account_fee() * 19 div 20. % 95% refund.
-security_ratio() -> fractions:new(3, 2).
+%security_ratio() -> fractions:new(3, 2).
 %At most, a channel can contain 1/4000th of the money.
 initial_channels() -> %Around 10000 channels.
     1.
     %MVB = minimum_validators_per_block(),
     %D = fractions:divide(security_ratio(), security_bonds_per_winner()),
     %fractions:multiply_int(D, 4) div MVB.
--define(AccountFee, fractions:new(1, max_address() * finality() * 10)).%so if all accounts are full, it takes 10 finalities until most of them start losing so much money that their accounts open up. 
-account_fee() -> ?AccountFee. 
+%-define(AccountFee, fractions:new(1, max_address() * finality() * 10)).%so if all accounts are full, it takes 10 finalities until most of them start losing so much money that their accounts open up. 
+
+%account_fee() -> ?AccountFee. 
 %-define(DelegationFee, fractions:new(finality() * 1000 - 1, finality() * 1000)).%so it would take about 15,000 blocks to lose 1/2 your money. So you have about 350,000 chances to be validator till you lose 1 your money. So you need at least initial_coins()/350000 in delegation to be able to profitably validate. Which means it supports up to 350000 validators at a time max.
--define(DelegationFee, fractions:new(1, 1000 * finality())).
-delegation_fee() -> ?DelegationFee.
-delegation_reward() -> fractions:subtract(fractions:new(1, 1), ?DelegationFee).
-block_creation_fee() -> 0.
-max_reveal() -> finality()*10.
+%-define(DelegationFee, fractions:new(1, 1000 * finality())).
+%delegation_fee() -> ?DelegationFee.
+%delegation_reward() -> fractions:subtract(fractions:new(1, 1), ?DelegationFee).
+%block_creation_fee() -> 0.
+%max_reveal() -> finality()*10.
 %1/4000000
 %block_creation_fee() -> fractions:new(1, 20000).%Which implies finality only has to be 13 blocks long!!!
 %It is important that 1/3 of the block_creation_fee be less than 2/3 of the validator's bond.
 %-define(PBCFV, fractions:multiply_int(block_creation_fee(), initial_coins()) div 3).
--define(BR, fractions:new(1, 1000)).%spending 1000 coins necessarily burns ~1.
-burn_ratio() -> ?BR.
+%-define(BR, fractions:new(1, 1000)).%spending 1000 coins necessarily burns ~1.
+%burn_ratio() -> ?BR.
 root() -> "data/".
 block_hashes() -> root() ++ "block_hashes.db".
 keys() -> root() ++ "keys.db".
