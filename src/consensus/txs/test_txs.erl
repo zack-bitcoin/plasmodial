@@ -18,6 +18,7 @@ test() ->
     S = test(9),%spend shares with team_close
     S = test(10),%spend shares with timeout
     S = test(11),%try out the oracle
+    %warning! after running test(11), we can no longer run other tests. because test(11) mines blocks, so tx_pool:dump can no longer undo transactions.
     S = test(12),%multiple bets in a single channel
     S.
 absorb(Tx) -> 
@@ -300,6 +301,7 @@ test(6) ->
 
 test(7) ->
     %existence tx
+    io:fwrite("existence test \m"),
     S = <<"test data">>,
     ID = keys:id(),
     {Trees,_,_} = tx_pool:data(),
@@ -314,6 +316,7 @@ test(7) ->
     success;
 test(8) ->
     %spend shares
+    io:fwrite("spend shares test\n"),
     tx_pool:dump(),
     {Trees,_,_} = tx_pool:data(),
     Accounts = trees:accounts(Trees),
@@ -363,6 +366,7 @@ test(8) ->
     success;
 test(9) ->
    %spend shares with channel. 
+    io:fwrite("spend shares with channel\n"),
     tx_pool:dump(),
     {Trees,_,_} = tx_pool:data(),
     Accounts = trees:accounts(Trees),
@@ -415,6 +419,7 @@ test(9) ->
     success;
 test(10) ->
    %spend shares with channel, with solo_close
+    io:fwrite("spend_shares with channel solo_close"),
     tx_pool:dump(),
     {Trees,_,_} = tx_pool:data(),
     Accounts = trees:accounts(Trees),
@@ -483,6 +488,7 @@ test(10) ->
     {_, empty, _} = shares:get(110, S4),
     success;
 test(11) ->
+    io:fwrite("testing an oracle\n"),
     %testing the oracle
     %launch an oracle with oracle_new
     Question = <<>>,
@@ -555,17 +561,22 @@ test(11) ->
     success;
 test(12) ->
     %multiple bets in a single channel
-    io:fwrite("channel solo close tx\n"),
-    BP = block:genesis(),
-    PH = block:hash(BP),
+    io:fwrite("multiple bets in a single channel\n"),
+    %BP = block:genesis(),
+    %PH = block:hash(BP),
     tx_pool:dump(),
-    Trees = block:trees(BP),
+    %timer:sleep(400),
+    %Trees = block:trees(BP),
+    {Trees, _, _} = tx_pool:data(),
     Accounts = trees:accounts(Trees),
     {NewAddr,NewPub,NewPriv} = testnet_sign:hard_new_key(),
     
     Fee = 10,
     Amount = 1000000,
-    ID2 = 2,
+    ID2 = 50,
+    io:fwrite("accounts is "),
+    io:fwrite(integer_to_list(Accounts)),
+    io:fwrite("\n"),
     {Ctx, _Proof} = create_account_tx:make(NewAddr, Amount, Fee, 1, ID2, Accounts),
     Stx = keys:sign(Ctx, Accounts),
     absorb(Stx),
@@ -604,6 +615,6 @@ test(12) ->
     absorb(Stx4),
     {_, _, Txs} = tx_pool:data(),
 
-    Block = block:mine(block:make(PH, Txs, 1), 100000000),%1 is the master pub
-    block:check2(Block),
+    %Block = block:mine(block:make(PH, Txs, 1), 100000000),%1 is the master pub
+    %block:check2(Block),
     success.

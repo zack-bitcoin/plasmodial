@@ -32,7 +32,7 @@ gas_limit() -> 1000000.
 %200,000,000 is enough to find the first 10001 prime numbers.
 backup() -> fractions:new(19, 20).
 %-define(MBS, max_size() div max_reveal() div 10).%use about 10% of size for blocks.
-max_block_size() -> 200000.%2*26 = 52 megabytes of ram to hold blocks.
+max_block_size() -> 200000.%in bytes
 %this is only a limit to the size of the transactions.
 %the other block parts are also limited. Height must be an integer one greater than the previous.
 %prev_hash must be the output of a hash function, which is fixed sized.
@@ -46,8 +46,8 @@ max_block_size() -> 200000.%2*26 = 52 megabytes of ram to hold blocks.
 
 %so, the block is limited in size
 
-%-define(ConsensusBytePrice, initial_coins() div max_size()).%instead we should have a maximum number of bytes per block, and garbage collect old blocks.
-%$consensus_byte_price() -> ?ConsensusBytePrice.
+-define(ConsensusBytePrice, initial_coins() div max_size()).%instead we should have a maximum number of bytes per block, and garbage collect old blocks.
+consensus_byte_price() -> ?ConsensusBytePrice.
 -define(MaxAddress, max_size() div 5 div 85).%use about 20% of space to store addresses. Each one is 85 bytes
 max_address() -> ?MaxAddress.
 -define(MaxChannel, max_size() * 3 div 10 div 30).%use about 30% of space to store channels. Each one is 30 bytes
@@ -71,7 +71,7 @@ account_fee() -> ?AccountFee.
 %-define(DelegationFee, fractions:new(finality() * 1000 - 1, finality() * 1000)).%so it would take about 15,000 blocks to lose 1/2 your money. So you have about 350,000 chances to be validator till you lose 1 your money. So you need at least initial_coins()/350000 in delegation to be able to profitably validate. Which means it supports up to 350000 validators at a time max.
 -define(DelegationFee, fractions:new(1, 1000 * finality())).
 delegation_fee() -> ?DelegationFee.
-%delegation_reward() -> fractions:subtract(fractions:new(1, 1), ?DelegationFee).
+delegation_reward() -> fractions:subtract(fractions:new(1, 1), ?DelegationFee).
 block_creation_fee() -> 0.
 max_reveal() -> finality()*10.
 %1/4000000
@@ -169,6 +169,10 @@ minimum_oracle_time() ->
     %a week in blocks
     %7*24*60*60 div block_time().
     7.%for testing purposes
+
+maximum_question_size() ->
+    100.
+    
     
 
 test() ->

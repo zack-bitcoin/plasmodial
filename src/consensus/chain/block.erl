@@ -287,8 +287,7 @@ list_many(N, X) -> [X|list_many(N-1, X)].
 
 binary_to_file(B) ->
     C = base58:binary_to_base58(B),
-    H = C,
-    "blocks/"++H++".db".
+    "blocks/"++C++".db".
 read(Hash) ->
     BF = binary_to_file(Hash),
     Z = db:read(BF),

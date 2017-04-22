@@ -18,8 +18,9 @@ doit(Tx, Trees, NewHeight) ->
     %If the question is not <<"">>, then they need to show that a different oracle with the question "" recently returned "bad", and the difficulty of this oracle is 1/2 as high as that oracle.
     ok = case Tx#oracle_new.question of
 	     <<"">>-> ok;
-	     _ -> 
+	     _Q -> 
 		 %get the recent oracle, make sure it's question was <<"">>, make sure our difficulty is half as high as that difficulty.
+		 %true = size(Q) < constants:maximum_question_size(),
 		 {_, Recent, _} = oracles:get(Tx#oracle_new.recent_price),
 		 Di = oracles:difficulty(Recent) div 2,
 		 Di = Tx#oracle_new.difficulty,
