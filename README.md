@@ -6,37 +6,15 @@ A blockchain for trustless markets and financial derivatives.
 
 
 Development has moved here: https://github.com/zack-bitcoin/testnet
+========
 
 
+.
+
+.
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+.
 
 
 This code will be used by [æternity](https://aeternity.com).
