@@ -109,11 +109,11 @@ retarget_frequency() -> %how many blocks till we recalculate the difficulty
     %40000.
     2000.
 block_time() -> 
-    6000.
+    600.
     %10.
 channel_closed_time() ->
     60*24*60*60 div block_time(). %about 2 months, in blocks
-oracle_future_limit() ->
+oracle_future_limit() -> %this is a limit of how far in the future an oracle can start.
     60*24*60*60 div block_time(). %about 2 months, in blocks
 time_units() -> %1000 = 1 second, 100 = 0.1 seconds
    100. 
@@ -156,11 +156,20 @@ oracle_initial_liquidity() ->
     block_reward() div 2.
 day() ->
     24*60*60 div block_time().
+governance_delay() ->
+    day() div 2.
+question_delay() ->
+    2*day().
 two_days() ->
     2*day().
+governance_change_limit() ->
+    51.
+    
+maximum_oracle_time() ->
+    minimum_oracle_time()*4.
     
 minimum_oracle_time() ->
-    %a week in blocks
+    %a week in block
     %7*24*60*60 div block_time().
     7.%for testing purposes
 

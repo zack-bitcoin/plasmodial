@@ -1,3 +1,10 @@
+oracle_close_tx needs to set the result to 3 if the trading volume is too low.
+oracle_close_tx needs to add one more trade in before closing. The creator of the oracle is making a bet against whatever orders are left in the order book.
+
+
+download blocks should be more asynchronous. replace talker:talk with talk.
+
+
 Maybe we should stop users from updating the same governance variables twice at once? Alternatively the community could just label the second governance oracle as a bad question.
 
 the oracle needs to be able to update the variables that define the protocol

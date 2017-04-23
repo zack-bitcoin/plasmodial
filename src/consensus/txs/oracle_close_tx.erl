@@ -16,29 +16,41 @@ doit(Tx, Trees, NewHeight) ->
     OID = Tx#oracle_close.oracle_id,
     Oracles = trees:oracles(Trees),
     {_, Oracle, _} = oracles:get(OID, Oracles),
-    true = oracles:done_timer(Oracle) < NewHeight,
     true = oracles:starts(Oracle) < NewHeight,
+    %if the volume of orders in the oracle is too low, then set the oracle:type to 3.
     Result = oracles:type(Oracle),
     Oracle2 = oracles:set_result(Oracle, Result),
     Oracle3 = oracles:set_done_timer(Oracle2, NewHeight),
+    io:fwrite("after setting result "),
+    io:fwrite(packer:pack(Oracle3)),
+    io:fwrite("\n"),
     Oracles2 = oracles:write(Oracle3, Oracles),
     Trees2 = trees:update_oracles(Trees, Oracles2),
-    Gov = oracles:governance(Oracle),
+    Gov = oracles:governance(Oracle3),
     Trees3 = 
 	case Gov of
 	    0 -> Trees2;
 	    G ->
-		GA = oracles:governance_amount(Oracle),
+		GA = oracles:governance_amount(Oracle3),
 		case Result of
 		    1 -> 
+			true = oracles:done_timer(Oracle3) < NewHeight,
 			Gov2=governance:change(G, GA, Gov),
 			trees:update_governance(Gov2, Trees2);
 		    2 ->
+			true = oracles:done_timer(Oracle3) < NewHeight,
 			Gov2=governance:change(G, -GA,Gov),
 			trees:update_governance(Gov2, Trees2);
-		    3 -> Trees2
+		    3 -> 
+			true = oracle:starts(Oracle3) + constants:maximum_oracle_time() < NewHeight,
+			Trees2
 		end
 	end,
-    trees:update_accounts(Trees2, NewAccounts).
+    OraclesEE = trees:oracles(Trees3),
+    {_, Oracle4, _} = oracles:get(OID, OraclesEE),
+    io:fwrite("after setting result 2 "),
+    io:fwrite(packer:pack(Oracle4)),
+    io:fwrite("\n"),
+    trees:update_accounts(Trees3, NewAccounts).
 test() ->
     success.

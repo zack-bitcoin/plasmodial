@@ -590,15 +590,55 @@ test(12) ->
     {Ctx4, _} = channel_timeout_tx:make(1,Accounts4,Channels2,CID,[],Fee),
     Stx4 = keys:sign(Ctx4, Accounts4),
     absorb(Stx4),
-    {_, _, Txs} = tx_pool:data(),
 
     %Block = block:mine(block:make(PH, Txs, 1), 100000000),%1 is the master pub
     %block:check2(Block),
+    success;
+test(13) ->
+    io:fwrite("testing an oracle\n"),
+    %testing the governance
+    %launch an oracle with oracle_new, close it on state "bad", 
+    Question = <<>>,
+    OID = 1,
+    Fee = 10,
+    tx_pool:dump(),
+    Diff = constants:initial_difficulty(),
+    {Trees,_,_} = tx_pool:data(),
+    Accounts = trees:accounts(Trees),
+    {Tx, _} = oracle_new_tx:make(1, Fee, Question, 1, OID, Diff, 0, 0, 0, Trees),
+    Stx = keys:sign(Tx, Accounts),
+    absorb(Stx),
+
+    mine_blocks(8),
+    {Trees2, _, _} = tx_pool:data(),
+    Accounts2 = trees:accounts(Trees2),
+    %close the oracle with oracle_close
+    {Tx2, _} = oracle_close_tx:make(1,Fee, OID, Accounts2),
+    Stx2 = keys:sign(Tx2, Accounts2),
+    absorb(Stx2),
+    OID2 = 2,
+    {Trees3,_,_} = tx_pool:data(),
+    %OraclesEE = trees:oracles(Trees3),
+    %{_, Oracle4, _} = oracles:get(OID, OraclesEE),
+    Accounts3 = trees:accounts(Trees3),
+    {Tx3, _} = oracle_new_tx:make(1, Fee, Question, 1, OID2, Diff, OID, 1, 5, Trees3),
+    Stx3 = keys:sign(Tx3, Accounts3),
+    absorb(Stx3),
+
+    Question2 = <<"1+1=2">>,
+    OID3 = 3,
+    {Trees4,_,_} = tx_pool:data(),
+    Accounts4 = trees:accounts(Trees4),
+    {Tx4, _} = oracle_new_tx:make(1, Fee, Question2, 1, OID3, Diff div 2, OID, 0, 0, Trees4),
+    Stx4 = keys:sign(Tx4, Accounts4),
+    absorb(Stx4),
+
+
     success.
 
 mine_blocks(Many) when Many < 1 -> ok;
 mine_blocks(Many) ->
     %only works if you set the difficulty very low.
     block:mine_blocks(1, 10000000000),
-    timer:sleep(100),
+    timer:sleep(200),
     mine_blocks(Many-1).

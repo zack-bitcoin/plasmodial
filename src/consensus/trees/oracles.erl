@@ -49,7 +49,7 @@ new(ID, Question, Starts, Creator, Difficulty, Governance, GovAmount) ->
 	    result = 0,
 	    question = Question,
 	    starts = Starts,
-	    type = 0,
+	    type = 3,%1 means we are storing orders of true, 2 is false, 3 is bad.
 	    orders = Orders,
 	    creator = Creator,
 	    difficulty = Difficulty,
@@ -129,7 +129,8 @@ get(ID, Root) ->
 
 test() ->
     Root = 0,
-    X = new(1, testnet_hasher:doit(1), 2, 1, constants:initial_difficulty(), 0, 0),
+    X0 = new(1, testnet_hasher:doit(1), 2, 1, constants:initial_difficulty(), 0, 0),
+    X = set_result(X0, 3),
     X2 = deserialize(serialize(X)),
     X = X2#oracle{orders = X#oracle.orders},
     NewLoc = write(X, Root),
