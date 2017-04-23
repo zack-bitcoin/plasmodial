@@ -5,7 +5,7 @@ A blockchain for trustless markets and financial derivatives.
 
 
 
-Development has moved here: https://github.com/zack-bitcoin/testnet
+Development has moved to here: https://github.com/zack-bitcoin/testnet
 ========
 
 
